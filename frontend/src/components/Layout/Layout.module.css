@@ -1,0 +1,126 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.mobileHeader {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  padding: 0 1rem;
+  z-index: 40;
+}
+
+.menuBtn {
+  color: var(--color-text);
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobileTitle {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-primary);
+}
+
+.sidebarWrapper {
+  height: 100%;
+  flex-shrink: 0;
+  width: 260px;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+  z-index: 50;
+}
+
+.sidebarWrapper.collapsed {
+  width: 0;
+}
+
+.desktopExpandBtn {
+  position: absolute;
+  top: 1.25rem;
+  left: 1rem;
+  z-index: 40;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.desktopExpandBtn:hover {
+  background: var(--color-background);
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  transition: padding-left 0.3s ease;
+}
+
+.contentCollapsed {
+  padding-left: 3.5rem; /* Safe area for the absolute positioned toggle button */
+}
+
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 45;
+}
+
+/* Mobile & Tablet responsiveness */
+@media (max-width: 768px) {
+  .mobileHeader {
+    display: flex;
+  }
+
+  .desktopExpandBtn {
+    display: none;
+  }
+
+  .mainContent {
+    padding-top: 60px; /* Offset for mobile header */
+  }
+
+  .sidebarWrapper {
+    width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+  }
+
+  .sidebarWrapper.open {
+    transform: translateX(0);
+  }
+
+  .overlay {
+    display: block;
+  }
+}

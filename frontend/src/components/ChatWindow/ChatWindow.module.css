@@ -1,0 +1,346 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-background);
+}
+
+.messagesList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.emptyState {
+  margin: auto;
+  text-align: center;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateLogoWrapper {
+  width: 144px;
+  height: 144px;
+  margin-bottom: 1.5rem;
+  animation: breathe 4s infinite ease-in-out;
+}
+
+.emptyStateLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Automatically invert logo in dark mode */
+[data-theme='dark'] .emptyStateLogo {
+  filter: brightness(0) invert(1);
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.emptyState h2 {
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+.messageWrapper {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.messageWrapper.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.messageWrapper.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.messageBubble {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.copyBtn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.copyBtn:hover {
+  background: rgba(128, 128, 128, 0.15);
+  color: var(--color-text);
+}
+
+.sourceBtnWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messageFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.user .messageBubble {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  border-bottom-right-radius: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.assistant .messageBubble {
+  background-color: transparent;
+  color: var(--color-text);
+  padding: 0;
+}
+
+.citation {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.typingIndicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 24px;
+}
+
+.typingIndicator span {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-text-muted);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+.typingIndicator span:nth-child(2) { animation-delay: 0.2s; }
+.typingIndicator span:nth-child(3) { animation-delay: 0.4s; }
+
+.inputArea {
+  padding: 1.5rem 2rem;
+  background-color: transparent;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.inputWrapper {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+}
+
+.textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-input-text);
+  resize: none;
+  padding: 0.5rem 0;
+  font-family: inherit;
+  outline: none;
+  max-height: 150px;
+}
+
+.sendBtn {
+  background-color: var(--color-text);
+  color: var(--color-background);
+  padding: 0.5rem 1rem;
+  border-radius: 9999px; /* Pill */
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px 0 rgba(0,0,0,0.1);
+}
+
+.sendBtn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  opacity: 0.9;
+}
+
+.sendBtn:disabled {
+  background-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Markdown Styles */
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.markdown p {
+  margin: 0;
+}
+
+.markdown ul, .markdown ol {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.markdown li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.markdown code {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+
+.markdown th, .markdown td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdown th {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user .markdown code,
+.user .markdown pre {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.user .markdown th, .user .markdown td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.user .markdown th {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tableContainer {
+  margin: 1rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tableContainer table {
+  margin: 0;
+  border: none;
+}
+
+.chartContainer {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.chartError {
+  color: #ef4444;
+  padding: 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.tableFooter {
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+}
+
+.csvBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.csvBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .messagesList {
+    padding: 1rem;
+  }
+  .messageWrapper {
+    max-width: 90%;
+  }
+  .inputArea {
+    padding: 1rem;
+  }
+  .inputWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sendBtn {
+    align-self: flex-end;
+  }
+}
