@@ -151,9 +151,12 @@ def extract_parameters(user_question: str, matched_func: str, schema_context: di
         args["actual_column"] = process.extractOne("actual amount spend", all_columns)[0]
         args["budget_column"] = process.extractOne("budget target", all_columns)[0]
         
-    # Add dummy filter matching for the sake of the deterministic requirement
-    # Real deterministic matching would require a massive regex engine and NER models.
-    
+    # Add rudimentary filter matching for years
+    year_match = re.search(r'\b(201\d|202\d)\b', user_question)
+    if year_match:
+        best_date_col = process.extractOne("date month year period", all_columns)
+        args["filter_column"] = best_date_col[0] if best_date_col else "date"
+        args["filter_value"] = year_match.group(1)
     return args
 
 def layer_1_regex_match(user_question: str) -> Optional[str]:
