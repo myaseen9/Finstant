@@ -1,7 +1,7 @@
 -- Schema extracted from finstant
 
 CREATE TABLE file_upload (
-    id integer NOT NULL DEFAULT nextval('file_upload_id_seq'::regclass),
+    id SERIAL PRIMARY KEY,
     filename text NOT NULL,
     file_hash text,
     size_bytes integer NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE chat_session (
 );
 
 CREATE TABLE audit_log (
-    id integer NOT NULL DEFAULT nextval('audit_log_id_seq'::regclass),
+    id SERIAL PRIMARY KEY,
     user_id integer,
     query_text text,
     parameters text,
@@ -42,7 +42,7 @@ CREATE TABLE sessions (
 );
 
 CREATE TABLE app_user (
-    id integer NOT NULL DEFAULT nextval('app_user_id_seq'::regclass),
+    id SERIAL PRIMARY KEY,
     username text NOT NULL,
     password_hash text NOT NULL,
     first_name text NOT NULL,
