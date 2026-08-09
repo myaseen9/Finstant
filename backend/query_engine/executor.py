@@ -38,12 +38,13 @@ def log_audit(user_id: int, query_text: str, parameters: str, step: int = 1):
     with engine.connect() as conn:
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS audit_log (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                query_text TEXT,
-                parameters TEXT,
-                step INTEGER,
-                timestamp TIMESTAMP DEFAULT now()
+                id integer NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                user_id integer NOT NULL,
+                query_text text,
+                parameters text,
+                step integer,
+                timestamp timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
             )
         """))
         try:

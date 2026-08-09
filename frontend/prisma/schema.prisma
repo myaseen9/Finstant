@@ -6,234 +6,72 @@ datasource db {
   provider = "postgresql"
 }
 
-model capital_expenditures {
-  asset_id                   String?
-  purchase_date              String?
-  asset_description          String?
-  category                   String?
-  department                 String?
-  cost                       Float?
-  useful_life_years          Int?
-  depreciation_method        String?
-  monthly_depreciation_value Float?
-  source_file                String? @map("_source_file")
-  sheet_name                 String? @map("_sheet_name")
-  row_number                 Int?    @map("_row_number")
-  id                         Int     @id @default(autoincrement())
-}
-
-model cash_inflows {
-  invoice_id      String?
-  invoice_date    String?
-  payment_date    String?
-  client_name     String?
-  client_industry String?
-  region          String?
-  gross_amount    Float?
-  tax_collected   Float?
-  net_inflow      Float?
-  payment_method  String?
-  status          String?
-  source_file     String? @map("_source_file")
-  sheet_name      String? @map("_sheet_name")
-  row_number      Int?    @map("_row_number")
-  id              Int     @id @default(autoincrement())
-}
-
-model dashboard_summary {
-  month                   String?
-  total_inflow            Float?
-  total_outflow           Float?
-  net_cash_flow           Float?
-  cumulative_cash_balance Float?
-  total_payroll           Float?
-  total_utilities         Float?
-  total_vendor_spend      Float?
-  source_file             String? @map("_source_file")
-  sheet_name              String? @map("_sheet_name")
-  row_number              Int?    @map("_row_number")
-  id                      Int     @id @default(autoincrement())
-}
-
-model debt_and_interest_schedule {
-  loan_id              String?
-  lender_name          String?
-  principal_amount     Int?
-  annual_interest_rate Float?
-  start_date           String?
-  monthly_payment      Float?
-  principal_paid_ytd   Float?
-  interest_paid_ytd    Float?
-  remaining_balance    Float?
-  source_file          String? @map("_source_file")
-  sheet_name           String? @map("_sheet_name")
-  row_number           Int?    @map("_row_number")
-  id                   Int     @id @default(autoincrement())
-}
-
-model employee_directory {
-  employee_id        String?
-  first_name         String?
-  last_name          String?
-  department         String?
-  role               String?
-  date_of_hire       String?
-  employment_status  String?
-  base_salary_annual Int?
-  source_file        String? @map("_source_file")
-  sheet_name         String? @map("_sheet_name")
-  row_number         Int?    @map("_row_number")
-  id                 Int     @id @default(autoincrement())
-}
-
-model payroll_logs {
-  pay_period_end_date   String?
-  employee_id           String?
-  first_name            String?
-  last_name             String?
-  monthly_base_pay      Float?
-  overtime_pay          Int?
-  bonuses               Int?
-  tax_withholding       Float?
-  healthcare_deductions Float?
-  net_pay_distributed   Float?
-  source_file           String? @map("_source_file")
-  sheet_name            String? @map("_sheet_name")
-  row_number            Int?    @map("_row_number")
-  id                    Int     @id @default(autoincrement())
-}
-
-model saas_and_subscriptions {
-  subscription_id   String?
-  software_name     String?
-  vendor_name       String?
-  billing_frequency String?
-  renewal_date      String?
-  number_of_seats   Int?
-  monthly_cost      Float?
-  department_owner  String?
-  status            String?
-  source_file       String? @map("_source_file")
-  sheet_name        String? @map("_sheet_name")
-  row_number        Int?    @map("_row_number")
-  id                Int     @id @default(autoincrement())
-}
-
-model tax_ledger {
-  transaction_id String?
-  tax_period     String?
-  tax_type       String?
-  filing_date    String?
-  payment_date   String?
-  amount_paid    Float?
-  authority_name String?
-  source_file    String? @map("_source_file")
-  sheet_name     String? @map("_sheet_name")
-  row_number     Int?    @map("_row_number")
-  id             Int     @id @default(autoincrement())
-}
-
-model travel_and_expense {
-  report_id            String?
-  employee_id          String?
-  employee_name        String?
-  expense_date         String?
-  category             String?
-  business_purpose     String?
-  total_amount         Float?
-  approval_flow_status String?
-  source_file          String? @map("_source_file")
-  sheet_name           String? @map("_sheet_name")
-  row_number           Int?    @map("_row_number")
-  id                   Int     @id @default(autoincrement())
-}
-
-model utility_bills {
-  bill_id        String?
-  service_month  String?
-  utility_type   String?
-  provider_name  String?
-  account_number String?
-  bill_date      String?
-  due_date       String?
-  amount         Float?
-  payment_status String?
-  source_file    String? @map("_source_file")
-  sheet_name     String? @map("_sheet_name")
-  row_number     Int?    @map("_row_number")
-  id             Int     @id @default(autoincrement())
-}
-
-model vendor_directory {
-  vendor_id      String?
-  vendor_name    String?
-  category       String?
-  contact_person String?
-  email          String?
-  payment_terms  String?
-  tax_id         String?
-  source_file    String? @map("_source_file")
-  sheet_name     String? @map("_sheet_name")
-  row_number     Int?    @map("_row_number")
-  id             Int     @id @default(autoincrement())
-}
-
-model vendor_payments {
-  transaction_id     String?
-  vendor_id          String?
-  vendor_name        String?
-  invoice_date       String?
-  payment_date       String?
-  amount             Float?
-  category           String?
-  department_charged String?
-  approval_status    String?
-  source_file        String? @map("_source_file")
-  sheet_name         String? @map("_sheet_name")
-  row_number         Int?    @map("_row_number")
-  id                 Int     @id @default(autoincrement())
-}
-
-// ==========================================
-// APPLICATION DATA
-// ==========================================
-
 model app_user {
-  id            Int            @id @default(autoincrement())
-  username      String         @unique
-  password_hash String
-  first_name    String
-  last_name     String
-  role          String         @default("user") // "admin" or "user"
-  designation   String         @default("User")
-  is_active     Boolean        @default(true)
-  sessions      chat_session[]
-  created_at    DateTime       @default(now())
+  id              Int            @id @default(autoincrement())
+  username        String         @unique
+  password_hash   String
+  first_name      String
+  last_name       String
+  role            String         @default("user")
+  created_at      DateTime       @default(now()) @db.Timestamp(6)
+  designation     String         @default("User")
+  is_active       Boolean        @default(true)
+  profile_picture String?
+  audit_log       audit_log[]
+  chat_sessions   chat_session[]
+  sessions        sessions[]
 }
 
 model chat_session {
-  id         String         @id @default(uuid())
-  title      String
-  user_id    Int
-  user       app_user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  messages   chat_message[]
-  created_at DateTime       @default(now())
+  id              String         @id @default(uuid())
+  user_id         Int
+  title           String?
+  created_at      DateTime?      @default(now()) @db.Timestamp(6)
+  deleted_by_user Boolean?       @default(false)
+  messages        chat_message[]
+  user            app_user       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_session_user")
+
+  @@index([user_id], map: "idx_chat_session_user_id")
 }
 
 model chat_message {
   id         String       @id @default(uuid())
   session_id String
-  session    chat_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
-  role       String       // "user" or "assistant"
-  text       String
-  created_at DateTime     @default(now())
+  role       String
+  content    String?
+  created_at DateTime?    @default(now()) @db.Timestamp(6)
+  session    chat_session @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chat_message_session")
+
+  @@index([session_id], map: "idx_chat_message_session_id")
 }
 
 model file_upload {
   id         Int      @id @default(autoincrement())
   filename   String
-  file_hash  String?  @unique
+  file_hash  String?
   size_bytes Int
   status     String   @default("Ingesting")
-  created_at DateTime @default(now())
+  created_at DateTime @default(now()) @db.Timestamp(6)
+}
+
+model audit_log {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  query_text String?
+  parameters String?
+  step       Int?
+  timestamp  DateTime? @default(now()) @db.Timestamp(6)
+  app_user   app_user  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_audit_log_user")
+
+  @@index([user_id], map: "idx_audit_log_user_id")
+}
+
+model sessions {
+  id         String    @id
+  user_id    Int
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  expires_at DateTime? @db.Timestamp(6)
+  app_user   app_user  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sessions_user")
+
+  @@index([user_id], map: "idx_sessions_user_id")
 }

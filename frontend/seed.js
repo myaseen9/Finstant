@@ -20,9 +20,11 @@ async function main() {
     create: {
       username: 'admin',
       password_hash: adminPassword,
-      first_name: 'Chen',
-      last_name: 'Brown',
-      role: 'admin'
+      first_name: 'Admin',
+      last_name: 'User',
+      role: 'admin',
+      designation: 'System Administrator',
+      is_active: true
     }
   });
 

@@ -27,50 +27,62 @@ app.add_middleware(
 def startup_event():
     engine = get_app_engine()
     with engine.connect() as conn:
+        import logging
         # app_user MUST be created first (other tables reference it)
         try:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS app_user (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT UNIQUE,
-                    password_hash TEXT,
-                    role TEXT,
-                    profile_picture TEXT
+                    id integer NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    username text NOT NULL UNIQUE,
+                    password_hash text NOT NULL,
+                    first_name text NOT NULL,
+                    last_name text NOT NULL,
+                    role text NOT NULL DEFAULT 'user'::text CHECK (role IN ('admin', 'user', 'superadmin')),
+                    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    designation text NOT NULL DEFAULT 'User'::text,
+                    is_active boolean NOT NULL DEFAULT true,
+                    profile_picture text
                 )
             """))
-            # Insert default admin if no users exist
-            count = conn.execute(text("SELECT COUNT(*) FROM app_user")).scalar()
+            # Insert default admin if 'admin' does not exist
+            count = conn.execute(text("SELECT COUNT(*) FROM app_user WHERE username = 'admin'")).scalar()
             if count == 0:
                 import bcrypt
-                default_hash = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode()
-                conn.execute(text("INSERT INTO app_user (id, username, password_hash, role) VALUES (1, 'admin', :hash, 'admin')"), {"hash": default_hash})
-        except Exception:
-            pass
+                default_hash = bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()
+                conn.execute(text("""
+                    INSERT INTO app_user (username, password_hash, first_name, last_name, role, designation, is_active)
+                    VALUES ('admin', :hash, 'Admin', 'User', 'admin', 'System Administrator', true)
+                """), {"hash": default_hash})
+        except Exception as e:
+            logging.error(f"Startup DB setup error in app_user creation: {e}")
 
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS sessions (
-                id TEXT PRIMARY KEY,
-                user_id INTEGER,
-                created_at TIMESTAMP DEFAULT now(),
-                expires_at TIMESTAMP
+                id text NOT NULL PRIMARY KEY,
+                user_id integer NOT NULL,
+                created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+                expires_at timestamp without time zone,
+                CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
             )
         """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS chat_session (
-                id TEXT PRIMARY KEY,
-                user_id INTEGER,
-                title TEXT,
-                deleted_by_user BOOLEAN DEFAULT False,
-                created_at TIMESTAMP DEFAULT now()
+                id text NOT NULL PRIMARY KEY,
+                user_id integer NOT NULL,
+                title text,
+                created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+                deleted_by_user boolean DEFAULT false,
+                CONSTRAINT fk_chat_session_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
             )
         """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS chat_message (
-                id TEXT PRIMARY KEY,
-                session_id TEXT REFERENCES chat_session(id) ON DELETE CASCADE,
-                role TEXT,
-                content TEXT,
-                created_at TIMESTAMP DEFAULT now()
+                id text NOT NULL PRIMARY KEY,
+                session_id text NOT NULL,
+                role text NOT NULL CHECK (role IN ('user', 'assistant')),
+                content text,
+                created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_chat_message_session FOREIGN KEY (session_id) REFERENCES chat_session(id) ON DELETE CASCADE
             )
         """))
 

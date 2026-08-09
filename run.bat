@@ -6,7 +6,7 @@ echo =========================================
 echo.
 
 echo Launching Backend FastAPI Server...
-start "Finance Backend" cmd /k "cd backend && venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 8000 --reload"
+start "Finance Backend" cmd /k "cd backend && venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
 echo Launching Next.js Development Server...
 start "Finance Frontend" cmd /k "cd frontend && npm run dev"
