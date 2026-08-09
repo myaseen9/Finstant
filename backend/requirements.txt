@@ -12,3 +12,5 @@ fastembed
 scikit-learn
 fuzzywuzzy
 python-Levenshtein
+python-calamine
+python-3.11 
