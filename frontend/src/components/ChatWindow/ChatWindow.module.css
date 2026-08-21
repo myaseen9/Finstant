@@ -3,13 +3,13 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--color-background);
+  background-color: transparent;
 }
 
 .messagesList {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 2rem 10%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -28,8 +28,13 @@
 .emptyStateLogoWrapper {
   width: 144px;
   height: 144px;
-  margin-bottom: 1.5rem;
-  animation: breathe 4s infinite ease-in-out;
+  margin-bottom: 2rem;
+  background: var(--color-surface);
+  border-radius: 32px;
+  padding: 2rem;
+  box-shadow: var(--glass-shadow);
+  border: var(--glass-border);
+  animation: breathe 6s infinite ease-in-out;
 }
 
 .emptyStateLogo {
@@ -44,19 +49,20 @@
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.05); opacity: 1; }
+  0%, 100% { transform: scale(1) translateY(0); opacity: 0.8; }
+  50% { transform: scale(1.05) translateY(-10px); opacity: 1; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
 }
 
 .emptyState h2 {
   color: var(--color-text);
   margin-bottom: 0.5rem;
-  font-weight: 600;
-  font-size: 1.5rem;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
 }
 
 .messageWrapper {
-  max-width: 80%;
+  max-width: 85%;
   display: flex;
   flex-direction: column;
 }
@@ -73,19 +79,19 @@
 
 .messageBubble {
   position: relative;
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  line-height: 1.5;
-  font-size: 0.95rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 20px;
+  line-height: 1.6;
+  font-size: 1rem;
 }
 
 .copyBtn {
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,7 +99,7 @@
 }
 
 .copyBtn:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
@@ -107,27 +113,35 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.25rem;
-  padding: 0 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0 0.5rem;
 }
 
 .user .messageBubble {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  border-bottom-right-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  color: white;
+  border: none;
+  border-radius: 20px;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 15px var(--color-primary-glow);
+}
+
+.user .copyBtn {
+  color: var(--color-text-muted);
 }
 
 .assistant .messageBubble {
-  background-color: transparent;
+  background-color: var(--color-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
   color: var(--color-text);
-  padding: 0;
+  border-bottom-left-radius: 4px;
 }
 
 .citation {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
   margin-top: 0.25rem;
   font-style: italic;
@@ -135,41 +149,38 @@
 
 .typingIndicator {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
   height: 24px;
+  padding: 1rem 1.5rem !important;
 }
 
 .typingIndicator span {
   width: 8px;
   height: 8px;
-  background-color: var(--color-text-muted);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   border-radius: 50%;
-  animation: pulse 1.5s infinite ease-in-out;
 }
-
-@keyframes pulse {
-  0%, 100% { transform: scale(0.8); opacity: 0.5; }
-  50% { transform: scale(1.2); opacity: 1; }
-}
-.typingIndicator span:nth-child(2) { animation-delay: 0.2s; }
-.typingIndicator span:nth-child(3) { animation-delay: 0.4s; }
 
 .inputArea {
-  padding: 1.5rem 2rem;
-  background-color: transparent;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 2rem 10%;
+  background: linear-gradient(to top, var(--color-background) 50%, transparent);
+  position: relative;
+  z-index: 10;
 }
 
 .inputWrapper {
   display: flex;
   gap: 1rem;
   align-items: flex-end;
-  background-color: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 0.5rem 1rem;
+  background-color: var(--color-surface-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 24px;
+  padding: 0.75rem 1rem 0.75rem 1.5rem;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+  transition: all 0.3s ease;
 }
 
 .textarea {
@@ -180,38 +191,39 @@
   resize: none;
   padding: 0.5rem 0;
   font-family: inherit;
+  font-size: 1rem;
   outline: none;
-  max-height: 150px;
+  max-height: 200px;
+  line-height: 1.5;
 }
 
 .sendBtn {
-  background-color: var(--color-text);
-  color: var(--color-background);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px; /* Pill */
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  color: white;
+  padding: 0.75rem;
+  border-radius: 50%; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px 0 rgba(0,0,0,0.1);
-}
-
-.sendBtn:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  opacity: 0.9;
+  box-shadow: 0 4px 12px var(--color-primary-glow);
 }
 
 .sendBtn:disabled {
-  background-color: var(--color-border);
+  background: var(--color-surface);
+  border: var(--glass-border);
   color: var(--color-text-muted);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Markdown Styles */
 .markdown {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .markdown p {
@@ -224,23 +236,31 @@
 }
 
 .markdown li {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .markdown pre {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0.75rem;
-  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  color: #f8f8f2 !important;
+  padding: 1rem;
+  border-radius: 12px;
   overflow-x: auto;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 .markdown code {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
   padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  font-family: 'Courier New', Courier, monospace;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
   font-size: 0.9em;
+}
+
+.user .markdown code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .markdown table {
@@ -250,31 +270,23 @@
 }
 
 .markdown th, .markdown td {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem;
   text-align: left;
 }
 
 .markdown th {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.user .markdown code,
-.user .markdown pre {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-.user .markdown th, .user .markdown td {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-.user .markdown th {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--color-hover);
+  font-weight: 600;
 }
 
 .tableContainer {
   margin: 1rem 0;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: var(--color-surface);
 }
 
 .tableContainer table {
@@ -284,23 +296,24 @@
 
 .chartContainer {
   margin: 1rem 0;
-  padding: 1rem;
+  padding: 1.5rem;
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
 }
 
 .chartError {
-  color: #ef4444;
+  color: var(--color-danger);
   padding: 1rem;
   background-color: rgba(239, 68, 68, 0.1);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
 }
 
 .tableFooter {
-  background-color: rgba(255, 255, 255, 0.03);
-  padding: 0.5rem 1rem;
+  background-color: var(--color-surface-elevated);
+  padding: 0.75rem 1.25rem;
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid var(--color-border);
@@ -309,38 +322,32 @@
 .csvBtn {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   background: transparent;
   border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .csvBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-hover);
   color: var(--color-text);
+  border-color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {
   .messagesList {
-    padding: 1rem;
+    padding: 1rem 5%;
   }
   .messageWrapper {
-    max-width: 90%;
+    max-width: 95%;
   }
   .inputArea {
-    padding: 1rem;
-  }
-  .inputWrapper {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .sendBtn {
-    align-self: flex-end;
+    padding: 1rem 5%;
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useRouter } from 'next/router';
 import { getMe } from '@/api/auth';
 import '@/styles/globals.css';
@@ -26,7 +27,7 @@ function RouteGuard({ children, user, isLoaded }) {
     } else {
       setAuthorized(true);
     }
-  }, [user, router.pathname, isLoaded]);
+  }, [user, router, router.pathname, isLoaded]);
 
   return authorized ? children : null;
 }

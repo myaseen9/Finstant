@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { useRouter } from 'next/router';
 import { AppContext } from '@/pages/_app';
 import { login } from '@/api/auth';
+import { motion } from 'framer-motion';
 import styles from './login.module.css';
 
 export default function Login() {
@@ -31,11 +32,25 @@ export default function Login() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.card}>
+      <div className={styles.backgroundBlob}></div>
+      <div className={styles.backgroundBlob2}></div>
+      
+      <motion.div 
+        className={styles.card}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <div className={styles.brandBanner}>
-          <div className={styles.bannerLogoWrapper}>
+          <motion.div 
+            className={styles.bannerLogoWrapper}
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="Finstant Logo" className={styles.bannerLogo} />
-          </div>
+          </motion.div>
           <span className={styles.bannerText}>FINSTΛNT</span>
         </div>
         <p className={styles.subtitle}>Sign in to your account</p>
@@ -60,13 +75,27 @@ export default function Login() {
             />
           </div>
 
-          {error && <div className={styles.errorMsg}>{error}</div>}
+          {error && (
+            <motion.div 
+              className={styles.errorMsg}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+            >
+              {error}
+            </motion.div>
+          )}
 
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
+          <motion.button 
+            type="submit" 
+            className={styles.submitBtn} 
+            disabled={loading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             {loading ? 'Authenticating...' : 'Sign In'}
-          </button>
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

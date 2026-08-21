@@ -3,6 +3,25 @@
   width: 100%;
 }
 
+.containerCollapsed {
+  display: flex;
+  justify-content: center;
+}
+
+/* Collapsed profile button — just the avatar, centered */
+.profileBtnCollapsed {
+  width: auto;
+  padding: 0.4rem;
+  justify-content: center;
+}
+
+/* Dropdown anchors to the right side when collapsed */
+.dropdownMenuCollapsed {
+  left: calc(100% + 8px);
+  bottom: 0;
+  min-width: 200px;
+}
+
 .profileBtn {
   width: 100%;
   display: flex;

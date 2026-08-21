@@ -107,6 +107,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <div className={styles.profileRow}>
                   <div className={styles.avatarLarge}>
                     {user?.profile_picture ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.profile_picture} alt="Profile" />
                     ) : (
                       <span>{user?.first_name?.charAt(0).toUpperCase() || user?.username?.charAt(0).toUpperCase() || 'U'}</span>

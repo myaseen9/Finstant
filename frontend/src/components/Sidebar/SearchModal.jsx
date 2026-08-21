@@ -53,7 +53,7 @@ export default function SearchModal({ isOpen, onClose, chats, onSelectChat }) {
         
         <div className={styles.resultsList}>
           {filteredChats.length === 0 ? (
-            <div className={styles.noResults}>No chats found matching "{searchTerm}"</div>
+            <div className={styles.noResults}>No chats found matching &quot;{searchTerm}&quot;</div>
           ) : (
             filteredChats.map(chat => (
               <button 

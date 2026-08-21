@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useContext } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ChatWindow.module.css';
 import { AppContext } from '@/pages/_app';
 import ReactMarkdown from 'react-markdown';
@@ -53,6 +54,7 @@ export default function ChatWindow({ chatId, setActiveChatId }) {
         })
         .catch(err => console.error("Failed to load chat history:", err));
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([]);
     }
   }, [chatId]);
@@ -124,63 +126,86 @@ export default function ChatWindow({ chatId, setActiveChatId }) {
     <div className={styles.container}>
       <div className={styles.messagesList}>
         {messages.length === 0 ? (
-          <div className={styles.emptyState}>
+          <motion.div 
+            className={styles.emptyState}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          >
             <div className={styles.emptyStateLogoWrapper}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.svg" alt="Finstant Logo" className={styles.emptyStateLogo} />
             </div>
             <h2>What do you want to know, {user?.firstName || user?.first_name || 'there'}?</h2>
-          </div>
+          </motion.div>
         ) : (
-          messages.map(msg => {
-            const parts = msg.text.split(/(?:\n\n|\n)?Source: /i);
-            const mainText = parts[0];
-            const sourceText = parts.length > 1 ? 'Source: ' + parts[1] : null;
-            
-            return (
-              <div key={msg.id} className={`${styles.messageWrapper} ${styles[msg.role]}`}>
-                <div className={`${styles.messageBubble} ${styles.markdown}`}>
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{ 
-                      table: (props) => <DataTable {...props} messageText={mainText} />,
-                      code({node, inline, className, children, ...props}) {
-                        const match = /language-(\w+)/.exec(className || '')
-                        if (!inline && match && match[1] === 'chart') {
-                          return <ChartRenderer jsonString={String(children).replace(/\n$/, '')} />
+          <AnimatePresence>
+            {messages.map((msg, index) => {
+              const parts = msg.text.split(/(?:\n\n|\n)?Source: /i);
+              const mainText = parts[0];
+              const sourceText = parts.length > 1 ? 'Source: ' + parts[1] : null;
+              
+              return (
+                <motion.div 
+                  key={msg.id} 
+                  className={`${styles.messageWrapper} ${styles[msg.role]}`}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className={`${styles.messageBubble} ${styles.markdown}`}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{ 
+                        table: (props) => <DataTable {...props} messageText={mainText} />,
+                        code({node, inline, className, children, ...props}) {
+                          const match = /language-(\w+)/.exec(className || '')
+                          if (!inline && match && match[1] === 'chart') {
+                            return <ChartRenderer jsonString={String(children).replace(/\n$/, '')} />
+                          }
+                          return <code className={className} {...props}>{children}</code>
                         }
-                        return <code className={className} {...props}>{children}</code>
-                      }
-                    }}
-                  >
-                    {mainText}
-                  </ReactMarkdown>
-                </div>
-                <div className={styles.messageFooter}>
-                  <CopyButton text={mainText} />
-                  {sourceText && (
-                    <SourceButton sourceText={sourceText} />
-                  )}
-                  {msg.citation && (
-                    <div className={styles.citation}>{msg.citation}</div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+                      }}
+                    >
+                      {mainText}
+                    </ReactMarkdown>
+                  </div>
+                  <div className={styles.messageFooter}>
+                    <CopyButton text={mainText} />
+                    {sourceText && (
+                      <SourceButton sourceText={sourceText} />
+                    )}
+                    {msg.citation && (
+                      <div className={styles.citation}>{msg.citation}</div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
         
         {isTyping && (
-          <div className={`${styles.messageWrapper} ${styles.assistant}`}>
+          <motion.div 
+            className={`${styles.messageWrapper} ${styles.assistant}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             <div className={`${styles.messageBubble} ${styles.typingIndicator}`}>
-              <span></span><span></span><span></span>
+              <motion.span animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6 }} />
+              <motion.span animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} />
+              <motion.span animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} />
             </div>
-          </div>
+          </motion.div>
         )}
         <div ref={endOfMessagesRef} />
       </div>
 
       <div className={styles.inputArea}>
-        <div className={styles.inputWrapper}>
+        <motion.div 
+          className={styles.inputWrapper}
+          whileFocus={{ scale: 1.01 }}
+        >
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -189,14 +214,16 @@ export default function ChatWindow({ chatId, setActiveChatId }) {
             className={styles.textarea}
             rows={1}
           />
-          <button 
+          <motion.button 
             onClick={handleSend} 
             className={styles.sendBtn}
             disabled={!input.trim() || isTyping}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            Send
-          </button>
-        </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </motion.button>
+        </motion.div>
       </div>
     </div>
   );

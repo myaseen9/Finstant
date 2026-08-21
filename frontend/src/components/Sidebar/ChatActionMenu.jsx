@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react';
 import styles from './ChatActionMenu.module.css';
 
-export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRename, onArchive, isPinned, buttonRef }) {
+export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRename, onArchive, isPinned, getButtonElement }) {
   const menuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      const btnElement = getButtonElement ? getButtonElement() : null;
       if (
         menuRef.current && 
         !menuRef.current.contains(event.target) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target)
+        (!btnElement || !btnElement.contains(event.target))
       ) {
         onClose();
       }
@@ -20,7 +20,7 @@ export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRen
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose, buttonRef]);
+  }, [isOpen, onClose, getButtonElement]);
 
   if (!isOpen) return null;
 
