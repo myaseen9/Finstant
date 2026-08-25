@@ -1,0 +1,47 @@
+/* ==========================================================================
+   Finstant — Global stylesheet
+
+   Import manifest. Order is load-bearing:
+
+     1. tokens  — primitives, no colour
+     2. themes  — the two flagships, which consume the token scales
+     3. base    — reset and element defaults, which consume both
+
+   Everything else lives in a CSS module beside its component. Nothing but
+   the theme transition below should be added to this file.
+   ========================================================================== */
+
+@import './tokens.css';
+@import './themes.css';
+@import './base.css';
+
+/* --------------------------------------------------------------------------
+   Theme transition — scoped, not global.
+
+   The previous approach put a permanent transition on html and body. Before
+   that it was a `*` selector, which taxed every hover in the app to animate
+   something that happens when a user flips a switch.
+
+   Instead, _app.jsx adds .theme-transitioning to <html> immediately before
+   swapping data-theme and removes it once --dur-theme has elapsed. The
+   cross-fade is paid for only during the switch.
+
+   The selector reaches into the tree because surfaces are painted by
+   components, not by body: without the descendant rule the canvas would
+   cross-fade while every panel on top of it snapped.
+   -------------------------------------------------------------------------- */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition:
+    background-color var(--dur-theme) var(--ease-in-out),
+    border-color var(--dur-theme) var(--ease-in-out),
+    color var(--dur-theme) var(--ease-in-out),
+    fill var(--dur-theme) var(--ease-in-out),
+    stroke var(--dur-theme) var(--ease-in-out),
+    box-shadow var(--dur-theme) var(--ease-in-out) !important;
+  /* Transform and opacity are excluded above, so an element mid-entrance
+     keeps its own timing instead of being dragged to --dur-theme. */
+  transition-delay: 0ms !important;
+}

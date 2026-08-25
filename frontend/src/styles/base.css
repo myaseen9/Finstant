@@ -1,0 +1,401 @@
+/* ==========================================================================
+   Finstant — Base layer
+
+   Reset, element defaults, focus, scrollbars, the shared keyframe set, and
+   a small number of utilities. Everything here is unclassed or u-prefixed;
+   component styling belongs in CSS modules.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Reset
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  background-color: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------------------
+   Elements
+   -------------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--text-3xl); letter-spacing: var(--tracking-tighter); }
+h2 { font-size: var(--text-2xl); letter-spacing: var(--tracking-tighter); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5 { font-size: var(--text-base); }
+h6 {
+  font-family: var(--font-data);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Prose links keep an underline — in a monochrome interface, colour is not
+   available to mark a link, so the underline is the only signal left. */
+a:where([href]):not([class]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--hairline-strong);
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+
+a:where([href]):not([class]):hover {
+  text-decoration-color: currentColor;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1; /* Firefox dims placeholders by default */
+}
+
+textarea {
+  resize: none;
+  border: none;
+  outline: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+/* Every number in a finance product is tabular, and every zero is slashed.
+   "zero" 1 removes the 0/O ambiguity that matters in an account code. */
+code,
+kbd,
+samp,
+pre,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'zero' 1;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-data);
+  font-size: 0.9em;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+hr {
+  height: var(--hairline-width);
+  border: none;
+  background-color: var(--hairline);
+}
+
+::selection {
+  background-color: var(--text);
+  color: var(--canvas);
+}
+
+/* --------------------------------------------------------------------------
+   Focus
+
+   The codebase previously contained zero :focus-visible rules, which means
+   keyboard users had no idea where they were. One monochrome ring, offset
+   into the canvas so it reads on any fill, on everything focusable.
+
+   :focus-visible rather than :focus, so a mouse click does not leave a ring
+   behind on a button that has already done its job.
+   -------------------------------------------------------------------------- */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Kill the UA ring only where a :focus-visible ring replaces it. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbars — thin and monochrome, so a scrolling table does not import a
+   second visual language into the page.
+   -------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--hairline);
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hairline-strong);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Keyframes — the shared set.
+
+   Consolidates 16 declarations across 10 files, where `pulse` existed 4x,
+   `spin` 3x and `modalIn` 2x. Module-local copies are removed as each file
+   is migrated; nothing new should declare its own.
+   -------------------------------------------------------------------------- */
+
+/* Entrances */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Message entrance: 8px rise + fade. Small distance on purpose — a long
+   travel makes a chat log feel like it is assembling itself. */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The figure block. Scale from .96 rather than 0 so the number never
+   renders at an illegible size on its way in. */
+@keyframes figureIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Provenance hairline, drawn left to right under the figure. */
+@keyframes hairlineDraw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Mobile bottom sheet. */
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: none; }
+}
+
+/* Loops */
+
+/* Streaming caret. Replaces the three-dot pulse — a terminal cursor is the
+   native idiom for "a machine is composing an answer". */
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Opacity only. The old pulse also scaled, which made loading skeletons
+   twitch against the grid they were standing in for. */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* Indeterminate progress sweep. */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
+
+/* Reading column. Character-based so it holds as type scales. */
+.u-measure {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* Any figure, delta or table cell. */
+.u-tabular {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'zero' 1;
+}
+
+/* Mono eyebrow label: "PKR · FY24", column headers, section kickers. */
+.u-label {
+  font-family: var(--font-data);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+}
+
+/* Wide tables scroll rather than crush their columns. */
+.u-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Available to screen readers, absent from the layout. Used for the text
+   behind decorative glyphs such as the source marker. */
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Retained: pre-existing markup relies on it. */
+.relative {
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+
+   Honours the OS setting rather than approximating it. Transitions are cut
+   to near-zero instead of 0 so transitionend listeners still fire — the
+   theme switch depends on one to clean up its class.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The caret is information, not decoration: if it stops blinking there is
+     no longer any indication that a response is streaming. Slowed to a
+     gentle fade instead of removed. */
+  .u-caret,
+  [data-caret] {
+    animation-duration: 1.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility: Keyboard Focus Outline (:focus-visible)
+   -------------------------------------------------------------------------- */
+:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent, var(--focus-ring, #22B8CF)) !important;
+  outline-offset: 2px !important;
+}

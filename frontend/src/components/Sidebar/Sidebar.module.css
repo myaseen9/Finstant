@@ -1,0 +1,541 @@
+/* ==========================================================================
+   Finstant — Modern Floating Capsule Sidebar
+   ========================================================================== */
+
+.sidebarContainer {
+  height: calc(100vh - 1.5rem);
+  margin: 0.75rem 0 0.75rem 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+  position: relative;
+}
+
+/* Expanded Sidebar Width */
+.expanded {
+  width: 270px;
+  padding: 1rem 0.75rem;
+}
+
+/* Mini Collapsed Rail Width */
+.collapsed {
+  width: 64px;
+  padding: 1rem 0.4rem;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   Top Horizontal Brand Row
+   -------------------------------------------------------------------------- */
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 1.15rem 0.4rem 1.05rem;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0.85rem;
+  flex-shrink: 0;
+}
+
+.brandLogoTitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+}
+
+.brandLogo {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+  margin-right: -6px;
+}
+
+[data-theme='dark'] .brandLogo,
+[data-theme='dark'] .miniLogo {
+  filter: brightness(0) invert(1);
+}
+
+.brandTitle {
+  font-weight: 800;
+  font-size: 1.65rem;
+  color: var(--color-text);
+  letter-spacing: 0.5px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transform: translateY(9px);
+}
+
+.edgeDockBtn {
+  position: absolute;
+  top: 46px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 99;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+
+.edgeDockBtn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+  transform: scale(1.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+/* --------------------------------------------------------------------------
+   Mini Collapsed Rail Elements
+   -------------------------------------------------------------------------- */
+.miniLogoBtn {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 0.5rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.miniLogoBtn:hover {
+  background: var(--color-hover);
+  transform: scale(1.08);
+}
+
+.miniLogo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.railDivider {
+  width: 36px;
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 0.4rem 0;
+  flex-shrink: 0;
+}
+
+.railList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.railList::-webkit-scrollbar {
+  display: none;
+}
+
+.railIconBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.railIconBtn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.railIconBtn.activeRail {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-left: 2px solid var(--accent);
+}
+
+.railPrimaryBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--btn-primary);
+  color: var(--btn-primary-text);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--elev-1);
+  flex-shrink: 0;
+}
+
+.railPrimaryBtn:hover {
+  background: var(--btn-primary-hover);
+  transform: scale(1.06);
+  box-shadow: var(--elev-2);
+}
+
+.railBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   Expanded Navigation Body
+   -------------------------------------------------------------------------- */
+.expandedScrollBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.newChatBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  background-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--elev-1);
+  margin-bottom: 0.2rem;
+  flex-shrink: 0;
+}
+
+.newChatBtn:hover {
+  background-color: var(--btn-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--elev-2);
+}
+
+.navItemBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.58rem 0.85rem;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.navItemBtn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.navItemBtn.navItemActive {
+  background-color: var(--surface-hover);
+  color: var(--text);
+  border-left: 3px solid var(--accent);
+  font-weight: 600;
+}
+
+.navItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+/* --------------------------------------------------------------------------
+   Recents Dropdown Accordion (Matching Reference Image)
+   -------------------------------------------------------------------------- */
+.recentsDropdownSection {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.15rem;
+}
+
+.recentsAccordionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recentsAccordionHeader:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+/* Capsule Pill Header when Open */
+.recentsAccordionHeader.activeHeader {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+[data-theme='light'] .recentsAccordionHeader.activeHeader {
+  background: #1E2228;
+  color: #FFFFFF;
+  border-color: #1E2228;
+}
+
+.recentsHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.recentsCollapseIndicator {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.iconBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   Recents Content with Tree Line & Active Solid Capsule
+   -------------------------------------------------------------------------- */
+.recentsListContainer {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.treeGuideLine {
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 12px;
+  width: 1.5px;
+  background: var(--color-border);
+  border-radius: 1px;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  background: transparent;
+}
+
+.chatItem:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+/* Active Chat Item: Pure Solid Capsule Pill (Matching Enlarz System in Reference) */
+.chatItem.active {
+  background: #FFFFFF !important;
+  color: #121212 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+.chatItem.active .itemFolderIcon {
+  color: #121212 !important;
+}
+
+.chatItem.active .iconBtn {
+  color: #666666 !important;
+}
+
+.chatItem.active .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #121212 !important;
+}
+
+.chatTitleContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  overflow: hidden;
+  flex: 1;
+}
+
+.itemFolderIcon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.chatTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.pinnedActions {
+  display: flex;
+}
+
+.pinBtn {
+  color: var(--color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar Footer
+   -------------------------------------------------------------------------- */
+.footer {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Scrollbars */
+.expandedScrollBody::-webkit-scrollbar,
+.recentsListContainer::-webkit-scrollbar {
+  width: 4px;
+}
+.expandedScrollBody::-webkit-scrollbar-thumb,
+.recentsListContainer::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .sidebarContainer {
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0 20px 20px 0;
+    border-left: none;
+    width: 100% !important;
+    max-width: 100%;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .expanded {
+    width: 100% !important;
+    padding: 0.85rem 0.75rem;
+  }
+
+  .brandRow {
+    min-height: 80px;
+    padding: 1.15rem 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .brandLogo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brandTitle {
+    font-size: 1.25rem;
+  }
+
+  .expandedScrollBody {
+    -webkit-overflow-scrolling: touch;
+  }
+}

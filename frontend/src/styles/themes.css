@@ -1,0 +1,207 @@
+/* ==========================================================================
+   Finstant — DPL Branding Design System Themes
+   
+   - Light Theme: Default Baseline (:root, [data-theme='light'])
+   - Dark Theme: Inverted Vice-Versa Override ([data-theme='dark'])
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   FINSTANT Light Theme (Default System Theme)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* --- Exact Specification Tokens --- */
+  --bg: #F3F1EC;
+  --surface: #FFFFFF;
+  --surface-hover: #FAFAF8;
+  --elevated-dark: #1C1C1E;
+  --text: #1A1A1A;
+  --text-muted: #8B8880;
+  --btn-primary: #1A1A1A;
+  --btn-primary-hover: #2E2E2E;
+  --btn-primary-text: #FFFFFF;
+  --accent: #22B8CF;
+  --accent-hover: #1C9AB0;
+  --track: #E8E5DD;
+  --border: #E3E0D8;
+
+  /* --- Category Tag Dots --- */
+  --badge-1: #7C6FF0;
+  --badge-2: #E8534F;
+  --badge-3: #22B8CF;
+  --badge-4: #EC4899;
+
+  /* --- Semantic Mappings to Match Design Architecture --- */
+  --canvas: var(--bg);
+  --nav: var(--surface);
+  --surface-raised: var(--surface);
+  --surface-sunken: var(--bg);
+
+  --hairline: var(--border);
+  --hairline-strong: var(--border);
+
+  --text-secondary: var(--text-muted);
+  --text-inverse: var(--surface);
+
+  /* Hover and active states as pure background shifts */
+  --hover: var(--surface-hover);
+  --active: var(--surface-hover);
+  --selected: var(--surface-hover);
+
+  --action: var(--btn-primary);
+  --action-text: var(--btn-primary-text);
+  --action-hover: var(--btn-primary-hover);
+  --action-quiet: var(--surface);
+  --action-quiet-text: var(--text);
+  --action-quiet-hover: var(--surface-hover);
+
+  --focus-ring: var(--accent);
+
+  /* Financial & Status Signals */
+  --signal-gain: #2E9E6B;
+  --signal-gain-wash: rgba(46, 158, 107, 0.10);
+  --signal-loss: #E8534F;
+  --signal-loss-wash: rgba(232, 83, 79, 0.10);
+  --signal-model: #7C6FF0;
+  --signal-model-wash: rgba(124, 111, 240, 0.10);
+  --signal-source: var(--accent);
+  --signal-source-wash: rgba(34, 184, 207, 0.10);
+
+  --signal-danger: #E8534F;
+  --signal-danger-wash: rgba(232, 83, 79, 0.10);
+
+  /* Elevation Shadows */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --elev-2: 0 4px 14px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --elev-3: 0 16px 40px -8px rgba(0, 0, 0, 0.07), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --elev-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  --scrim: rgba(0, 0, 0, 0.35);
+
+  --fill-subtle: var(--surface-hover);
+  --fill-muted: var(--track);
+  --fill-strong: var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Dark Theme (Inverted Vice-Versa Override)
+   -------------------------------------------------------------------------- */
+[data-theme='dark'],
+html[data-theme='dark'],
+body[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* --- Inverted Specification Tokens --- */
+  --bg: #000000;              /* True pitch black app canvas (#000000) */
+  --surface: #0E1013;          /* Sleek dark surfaces (sidebar, cards, chat window) */
+  --surface-hover: #171A20;    /* Subtle hover on surfaces, sidebar rows, table rows */
+  --elevated-dark: #1C1F26;    /* Elevated element / user chat bubble */
+  --text: #FFFFFF;             /* Primary text, headings, values */
+  --text-muted: #8E949F;       /* Secondary text, labels, timestamps */
+  --btn-primary: #FFFFFF;      /* Primary button in dark mode (New Chat, Send) — White */
+  --btn-primary-hover: #E3E0D8;/* Primary button hover state */
+  --btn-primary-text: #000000; /* Deep black icon/text on white button */
+  --accent: #22B8CF;           /* Cyan accent preserved identically */
+  --accent-hover: #1C9AB0;     /* Accent hover */
+  --track: #14171D;            /* Progress track / switch background */
+  --border: #1E222A;           /* Clean dark borders and dividers */
+
+  /* --- Category Tag Dots --- */
+  --badge-1: #7C6FF0;
+  --badge-2: #E8534F;
+  --badge-3: #22B8CF;
+  --badge-4: #EC4899;
+
+  /* --- Semantic Mappings to Match Design Architecture --- */
+  --canvas: var(--bg);
+  --nav: var(--surface);
+  --surface-raised: var(--surface);
+  --surface-sunken: var(--bg);
+
+  --hairline: var(--border);
+  --hairline-strong: var(--border);
+
+  --text-secondary: var(--text-muted);
+  --text-inverse: var(--bg);
+
+  /* Hover and active states as pure background shifts */
+  --hover: var(--surface-hover);
+  --active: var(--surface-hover);
+  --selected: var(--surface-hover);
+
+  --action: var(--btn-primary);
+  --action-text: var(--btn-primary-text);
+  --action-hover: var(--btn-primary-hover);
+  --action-quiet: var(--surface);
+  --action-quiet-text: var(--text);
+  --action-quiet-hover: var(--surface-hover);
+
+  --focus-ring: var(--accent);
+
+  /* Financial & Status Signals */
+  --signal-gain: #2E9E6B;
+  --signal-gain-wash: rgba(46, 158, 107, 0.14);
+  --signal-loss: #E8534F;
+  --signal-loss-wash: rgba(232, 83, 79, 0.14);
+  --signal-model: #7C6FF0;
+  --signal-model-wash: rgba(124, 111, 240, 0.14);
+  --signal-source: var(--accent);
+  --signal-source-wash: rgba(34, 184, 207, 0.14);
+
+  --signal-danger: #E8534F;
+  --signal-danger-wash: rgba(232, 83, 79, 0.15);
+
+  /* Elevation Shadows */
+  --elev-1: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --elev-2: 0 4px 14px -2px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --elev-3: 0 16px 40px -8px rgba(0, 0, 0, 0.75), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  --elev-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  --scrim: rgba(0, 0, 0, 0.75);
+
+  --fill-subtle: var(--surface-hover);
+  --fill-muted: var(--track);
+  --fill-strong: var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Brand Color Aliases (Full backward compatibility for all modules)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
+  --color-primary: var(--btn-primary);
+  --color-accent: var(--accent);
+  --color-background: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-raised);
+  --color-sidebar: var(--nav);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--hairline);
+  --color-hover: var(--hover);
+  --color-danger: var(--signal-danger);
+  --color-input-bg: var(--surface);
+  --color-input-text: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility: prefers-contrast: more
+   -------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme='light'] {
+    --hairline: #9CA3AF;
+    --hairline-strong: #1E1E1E;
+    --text-muted: #2C3539;
+  }
+
+  [data-theme='dark'] {
+    --hairline: #4B5563;
+    --hairline-strong: #9CA3AF;
+    --text-muted: #D1D5DB;
+  }
+}

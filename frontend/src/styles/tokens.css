@@ -1,0 +1,159 @@
+/* ==========================================================================
+   Finstant — Design tokens (primitives)
+
+   Colour lives in themes.css. This file is theme-independent: every value
+   here is identical in Finstant Dark and Finstant Light.
+
+   Naming: --<scale>-<step>. Steps are unitless ordinals, not pixel values,
+   so the scale can be retuned without renaming anything.
+   ========================================================================== */
+
+:root {
+  /* --- Space ------------------------------------------------------------
+     4px base. Steps are named for their multiple of the base, so --space-4
+     is 4 x 4px = 16px. Gaps in the sequence are deliberate: there is no
+     --space-7 because nothing should need it.                            */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-1: 0.25rem;   /*  4px */
+  --space-2: 0.5rem;    /*  8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-14: 3.5rem;   /* 56px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+
+  /* --- Type families ---------------------------------------------------
+     Populated by next/font in src/lib/fonts.js, which sets --font-inter
+     and --font-plex-mono on <html>.                                      */
+  --font-sans:
+    var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:
+    var(--font-plex-mono), ui-monospace, SFMono-Regular, 'SF Mono',
+    Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Prose and UI */
+  --font-body: var(--font-sans);
+  /* Headings share the Inter sans family */
+  --font-heading: var(--font-sans);
+  /* Figures, table cells, labels */
+  --font-data: var(--font-sans);
+
+  /* --- Type scale -------------------------------------------------------
+     --text-figure is the only fluid step: a headline number should fill
+     the space it is given, and it is always the largest thing on screen. */
+  --text-2xs: 0.6875rem;   /* 11px — mono eyebrow label, uppercase       */
+  --text-xs: 0.75rem;      /* 12px — captions, table meta                */
+  --text-sm: 0.8125rem;    /* 13px — dense UI, table cells               */
+  --text-base: 0.9375rem;  /* 15px — body and chat prose                 */
+  --text-lg: 1.0625rem;    /* 17px — lead paragraph, modal titles        */
+  --text-xl: 1.3125rem;    /* 21px                                       */
+  --text-2xl: 1.75rem;     /* 28px                                       */
+  --text-3xl: 2.375rem;    /* 38px                                       */
+  --text-figure: clamp(2.5rem, 6vw, 4rem);
+
+  /* --- Line height -----------------------------------------------------
+     Figures get --leading-none: a number has no descender rhythm to keep
+     and extra leading only pushes its label away from it.                */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* --- Letter spacing --------------------------------------------------- */
+  --tracking-tighter: -0.02em;  /* --text-3xl and up            */
+  --tracking-tight: -0.01em;    /* --text-xl / --text-2xl       */
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-label: 0.08em;     /* uppercase mono eyebrow only  */
+
+  /* --- Weight ----------------------------------------------------------- */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* --- Measure ----------------------------------------------------------
+     Character-based, so the reading column stays constant as type scales.
+     Replaces percentage-width message bubbles.                           */
+  --measure: 68ch;
+  --measure-narrow: 52ch;
+  --measure-wide: 84ch;
+
+  /* --- Radius -----------------------------------------------------------
+     Four steps. --radius-full is for pills and avatars only.             */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  --focus-ring-offset: 2px;
+
+  /* --- Category Tag Dots (Used in both themes) --------------------------- */
+  --badge-1: #7C6FF0; /* violet */
+  --badge-2: #E8534F; /* coral  */
+  --badge-3: #22B8CF; /* cyan   */
+  --badge-4: #EC4899; /* pink   */
+
+  /* --- Motion ----------------------------------------------------------
+     One contract for the whole app. --dur-theme is deliberately the
+     longest: a full-surface cross-fade needs time to not look like a
+     flash, and it is the only transition allowed to be slow.             */
+  --dur-instant: 90ms;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --dur-theme: 420ms;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+
+  /* Stagger between consecutive message entrances. */
+  --stagger: 40ms;
+
+  /* --- Z-index ---------------------------------------------------------
+     Gaps of 100 so a layer can be inserted without renumbering. Nothing
+     in the app may use a raw z-index value.                              */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 100;
+  --z-rail: 200;
+  --z-drawer: 300;
+  --z-overlay: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+
+  /* --- Layout dimensions ------------------------------------------------ */
+  --rail-nav: 260px;        /* full nav rail                     */
+  --rail-nav-icon: 64px;    /* collapsed icon rail, 768–1023px   */
+  --rail-worksheet: 380px;  /* persistent worksheet, >=1280px    */
+  --header-mobile: 56px;    /* mobile top bar                    */
+  --composer-min: 52px;
+
+  /* --- Breakpoints ------------------------------------------------------
+     Reference values only. CSS custom properties cannot be used inside
+     @media queries, so the literals below are repeated in the media
+     blocks — these exist so JS (matchMedia) and reviewers read the same
+     numbers, and so the five tiers are declared in exactly one place.
+
+       --bp-sm   480px   phone landscape
+       --bp-md   768px   tablet portrait / nav becomes an icon rail
+       --bp-lg  1024px   nav rail expands
+       --bp-xl  1280px   worksheet rail becomes persistent
+       --bp-2xl 1536px   measure stops growing                            */
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+}
