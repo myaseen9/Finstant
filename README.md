@@ -10,7 +10,7 @@ Ensure you have the following software installed on your machine:
 
 1. **Python 3.10+** (Verify: `python --version`)
 2. **Node.js 18+ & npm** (Verify: `node -v` and `npm -v`)
-3. **PostgreSQL 14+** (Verify: `psql --version`) running on port `5432`
+3. **PostgreSQL 14+** (Verify: `psql --version` or `createdb --version`) running on port `5432`
 4. **Git** (Verify: `git --version`)
 5. **Visual Studio Code** (or your preferred IDE)
 
@@ -20,83 +20,118 @@ Ensure you have the following software installed on your machine:
 
 ### 1️⃣ Clone the Repository & Open in VS Code
 
-Open your terminal (PowerShell, Command Prompt, or Git Bash):
-
+Clone the repository:
 ```bash
-# 1. Clone the repository
 git clone https://github.com/your-username/finance-knowledge-engine.git
+```
 
-# 2. Move into the project directory
+Move into the project directory:
+```bash
 cd finance-knowledge-engine
+```
 
-# 3. Open the entire codebase in VS Code
+Open the codebase in VS Code:
+```bash
 code .
 ```
 
 ---
 
-### 2️⃣ Database Setup (PostgreSQL)
+### 2️⃣ Database Setup (PostgreSQL Terminal Commands)
 
 FINSTΛNT utilizes two PostgreSQL databases:
-* `finstant_users`: Manages authentication, user profiles, RBAC permissions, chat sessions, and audit logs.
+* `finstant_users`: Manages authentication, RBAC sheet permissions, chat sessions, and audit logs.
 * `finstant_kb`: Stores uploaded financial workbooks, normalized ledger tables, and knowledge data.
 
-Open **SQL Shell (psql)** or run these commands in **pgAdmin Query Tool**:
+#### Step 2.1: Create the Databases
 
-```sql
--- Step 2.1: Create both application databases
-CREATE DATABASE finstant_users;
-CREATE DATABASE finstant_kb;
-
--- Step 2.2: Create a secure read-only user for safe SQL querying
-CREATE USER finstant_kb_reader WITH PASSWORD 'kb_reader_secure_123';
-GRANT CONNECT ON DATABASE finstant_kb TO finstant_kb_reader;
-
--- Step 2.3: Connect to the knowledge base database and set table permissions
-\c finstant_kb
-GRANT USAGE ON SCHEMA public TO finstant_kb_reader;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;
+Create the main users database:
+```bash
+createdb -U postgres finstant_users
 ```
+
+Create the knowledge base database:
+```bash
+createdb -U postgres finstant_kb
+```
+
+#### Step 2.2: Apply the Canonical Schema
+
+Apply the application users schema to `finstant_users`:
+```bash
+psql -U postgres -d finstant_users -f db_schemas/app_schema.sql
+```
+
+#### Step 2.3: Configure the Secure Read-Only Reader User
+
+Create the read-only user and grant query permissions on `finstant_kb`:
+```bash
+psql -U postgres -d finstant_kb -c "CREATE USER finstant_kb_reader WITH PASSWORD 'kb_reader_secure_123'; GRANT CONNECT ON DATABASE finstant_kb TO finstant_kb_reader; GRANT USAGE ON SCHEMA public TO finstant_kb_reader; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;"
+```
+
+#### 🔄 Fresh Database Reset (If you ever need to start completely fresh)
+
+If you ever need to reset both databases (e.g. after testing or schema changes), drop and recreate:
+```bash
+dropdb -U postgres finstant_users
+createdb -U postgres finstant_users
+psql -U postgres -d finstant_users -f db_schemas/app_schema.sql
+
+dropdb -U postgres finstant_kb
+createdb -U postgres finstant_kb
+psql -U postgres -d finstant_kb -c "CREATE USER finstant_kb_reader WITH PASSWORD 'kb_reader_secure_123'; GRANT CONNECT ON DATABASE finstant_kb TO finstant_kb_reader; GRANT USAGE ON SCHEMA public TO finstant_kb_reader; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;"
+```
+
+> **Automated Alternative (Python):** You can also run `python setup_db.py` inside the `backend/` folder to automatically create databases, roles, and permissions in one step.
 
 ---
 
-### 3️⃣ Backend Environment & Dependency Setup
+### 3️⃣ Backend Setup (Terminal Commands)
 
-Open a terminal inside VS Code at the project root (`finance-knowledge-engine`):
+Open a terminal in VS Code at the project root (`finance-knowledge-engine`):
 
+Navigate into the backend directory:
 ```bash
-# 1. Navigate into the backend folder
 cd backend
+```
 
-# 2. Create a virtual environment named 'venv'
+Create a virtual environment named `venv`:
+```bash
 python -m venv venv
+```
 
-# 3. Activate the virtual environment
-# Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-# Windows (Command Prompt):
-.\venv\Scripts\activate.bat
-# macOS / Linux:
-source venv/bin/activate
+Activate the virtual environment:
+* **Windows (PowerShell):**
+  ```powershell
+  .\venv\Scripts\Activate.ps1
+  ```
+* **Windows (Command Prompt):**
+  ```cmd
+  .\venv\Scripts\activate.bat
+  ```
+* **macOS / Linux:**
+  ```bash
+  source venv/bin/activate
+  ```
 
-# 4. Install all required backend Python packages
+Upgrade pip and install all backend requirements:
+```bash
 pip install -r ../requirements.txt
 ```
 
 #### Configure Backend `.env` File:
-Create or edit the `.env` file inside the `backend/` directory:
-
-```env
-# PostgreSQL Database URLs
+Create or edit `backend/.env`:
+```ini
+# Database Connections
 DATABASE_URL=postgresql://postgres:12345678@localhost:5432/finstant_users
-KB_DATABASE_URL=postgresql://finstant_kb_reader:kb_reader_secure_123@localhost:5432/finstant_kb
 KB_INGESTION_URL=postgresql://postgres:12345678@localhost:5432/finstant_kb
+KB_DATABASE_URL=postgresql://finstant_kb_reader:kb_reader_secure_123@localhost:5432/finstant_kb
 
-# LLM & AgentRouter API Configuration
-AGENTROUTER_API_KEY=your_agentrouter_or_openrouter_api_key
+# LLM & Reasoning Model
+AGENTROUTER_API_KEY=your_agentrouter_api_key
 AGENTROUTER_MODEL=claude-opus-5
 
-# AWS Cognito Authentication Configuration
+# AWS Cognito & IAM Credentials
 COGNITO_REGION=eu-north-1
 COGNITO_USER_POOL_ID=your_cognito_user_pool_id
 COGNITO_APP_CLIENT_ID=your_cognito_app_client_id
@@ -104,19 +139,45 @@ AWS_ACCESS_KEY_ID=your_aws_access_key_id
 AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 ```
 
+Start the FastAPI backend server:
+```bash
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+*(Backend runs at `http://127.0.0.1:8000`)*
+
 ---
 
-### 4️⃣ Frontend Dependency Setup
+### 4️⃣ Frontend Setup (Terminal Commands)
 
-Open a **new terminal window** in VS Code:
+Open a **new terminal tab** in VS Code:
 
+Navigate into the frontend directory:
 ```bash
-# 1. Navigate into the frontend folder
 cd frontend
+```
 
-# 2. Install all frontend JavaScript/React dependencies
+Install all frontend dependencies:
+```bash
 npm install
 ```
+
+#### Configure Frontend `.env` File:
+Create or edit `frontend/.env`:
+```ini
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+
+# AWS Cognito Configuration
+NEXT_PUBLIC_COGNITO_REGION=eu-north-1
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_cognito_user_pool_id
+NEXT_PUBLIC_COGNITO_APP_CLIENT_ID=your_cognito_app_client_id
+```
+
+Start the Next.js frontend development server:
+```bash
+npm run dev
+```
+*(Frontend runs at `http://localhost:3000`)*
 
 ---
 
@@ -125,17 +186,17 @@ npm install
 To establish your organization's first **Super Admin** account:
 
 1. **Log in to the AWS Console:**
-   * Navigate to **Amazon Cognito** -> **User Pools**.
+   * Navigate to **Amazon Cognito** → **User Pools**.
    * Click on your configured user pool (`COGNITO_USER_POOL_ID`).
 2. **Create the Super Admin User:**
-   * In the left sidebar, click **Users** -> Click the orange **"Create user"** button.
+   * In the left sidebar, click **Users** → Click the orange **"Create user"** button.
    * Select **"Send an email invitation"**.
    * Enter a valid, **active corporate or personal email address** as the Username / Email.
    * Choose **"Generate a password"** (AWS will automatically create and email a temporary password).
    * Click **"Create user"**.
-3. ⚠️ **Important Email Note:**
+3. ⚠️ **Important Email Notice:**
    * AWS Cognito will instantly dispatch an automated email with the subject *"Your temporary password"*.
-   * **Check your Spam / Junk folder** if the email does not appear in your primary inbox within 1–2 minutes.
+   * **Check your Spam / Junk folder** if the invitation email is not visible in your primary inbox within 1–2 minutes.
 
 ---
 
@@ -147,7 +208,7 @@ You can launch the complete system with one click or via manual terminals:
 Double-click **`START_FINSTANT.bat`** in the project root folder. It will:
 1. Start the FastAPI Backend on `http://127.0.0.1:8000`
 2. Start the Next.js Frontend on `http://localhost:3000`
-3. Automatically launch your default browser to `http://localhost:3000/login`
+3. Automatically open your browser to `http://localhost:3000/login`
 
 #### Option B: Manual Dual-Terminal Commands
 
@@ -176,9 +237,9 @@ npm run dev
 
 ### 8️⃣ Ingesting Financial Master Data
 
-1. Navigate to the **Data Upload / Admin Portal** (`http://localhost:3000/upload`).
+1. Navigate to the **Data Upload / Admin Portal** (`http://localhost:3000/upload` or via the left sidebar).
 2. Upload your organization's Master Excel Workbook (`.xlsx`).
-3. The system will automatically parse all sheets, normalize financial ledger headers, index entities into the Dynamic Semantic Grounder, and prepare the knowledge base for natural language queries.
+3. The system will automatically parse all sheets, normalize financial ledger headers, index entities into the Dynamic Semantic Grounder, and prepare the knowledge base for instant natural language queries.
 
 ---
 
@@ -217,6 +278,6 @@ Admins and Super Admins can add team members directly from the web interface wit
 ## 🏗️ Architecture & Security Highlights
 
 * **Layer-0 RBAC Guard (< 2ms):** Frontline verification intercepts unauthorized table access before LLM execution with zero schema leakage.
-* **Dynamic Semantic Grounder:** Automatically resolves non-verbatim accounting terms (`"salaries of management"` -> `"Salaries Management/CSG"`) across 100+ ledger lines.
+* **Dynamic Semantic Grounder:** Automatically resolves non-verbatim accounting terms (`"salaries of management"` → `"Salaries Management/CSG"`) across 100+ ledger lines.
 * **4-Turn Context Memory:** Retains multi-turn entity anchors so users can drill down on rolling monthly metrics without repeating subjects.
 * **Enterprise Query Audit:** Logs every query, cache hit, and security event into PostgreSQL for real-time compliance reporting.
