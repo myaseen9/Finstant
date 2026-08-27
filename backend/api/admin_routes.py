@@ -5,8 +5,9 @@ import os
 import sys
 import subprocess
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import text, create_engine
 from query_engine.executor import get_app_engine
+
 from query_engine.functions import get_engine, get_kb_engine
 from api.dependencies import get_current_user, require_admin
 
@@ -145,10 +146,17 @@ async def delete_upload(file_id: int, current_user: dict = Depends(require_admin
     return {"status": "success", "message": "File and associated data deleted."}
 
 
+def get_kb_ingest_engine():
+    db_url = os.environ.get("KB_INGESTION_URL", os.environ.get("DATABASE_URL"))
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    return create_engine(db_url)
+
+
 @router.delete("/wipe-knowledge-base")
 async def wipe_knowledge_base(current_user: dict = Depends(require_admin)):
     engine = get_app_engine()
-    kb_engine = get_kb_engine()
+    kb_admin_engine = get_kb_ingest_engine()
     try:
         upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
         if os.path.exists(upload_dir):
@@ -163,14 +171,21 @@ async def wipe_knowledge_base(current_user: dict = Depends(require_admin)):
 
         with engine.connect() as conn:
             conn.execute(text("DELETE FROM file_upload"))
+            conn.execute(text("DELETE FROM user_sheet_access"))
             conn.commit()
 
-        with kb_engine.execution_options(isolation_level="AUTOCOMMIT").connect() as kb_conn:
-            kb_conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+        with kb_admin_engine.execution_options(isolation_level="AUTOCOMMIT").connect() as kb_conn:
+            kb_conn.execute(text("""
+                DROP SCHEMA public CASCADE;
+                CREATE SCHEMA public;
+                GRANT USAGE ON SCHEMA public TO finstant_kb_reader;
+                ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;
+            """))
 
         return {"status": "success", "message": "Knowledge base completely wiped."}
     except Exception as e:
         return {"error": str(e)}
+
 
 
 @router.get("/download-master")
