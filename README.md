@@ -13,10 +13,17 @@ Ensure you have the following software installed on your machine:
 3. **PostgreSQL 14+** (Verify: `psql --version` or `createdb --version`) running on port `5432`
 4. **Git** (Verify: `git --version`)
 5. **Visual Studio Code** (or your preferred IDE)
+6. **AWS Account** (with administrative access to Amazon Cognito & IAM)
 
 ---
 
-## Complete Setup Guide (Step-by-Step)
+## Complete Setup Guide (Step-by-Step Flow)
+
+```
+1️⃣ Clone Repo ──► 2️⃣ PostgreSQL DB ──► 3️⃣ AWS Cognito & IAM ──► 4️⃣ Backend Setup ──► 5️⃣ Frontend Setup ──► 6️⃣ Launch System
+```
+
+---
 
 ### 1️⃣ Clone the Repository & Open in VS Code
 
@@ -45,7 +52,7 @@ FINSTΛNT utilizes two PostgreSQL databases:
 
 #### Step 2.1: Create the Databases
 
-Create the main users database:
+Create the main application users database:
 ```bash
 createdb -U postgres finstant_users
 ```
@@ -82,11 +89,77 @@ createdb -U postgres finstant_kb
 psql -U postgres -d finstant_kb -c "CREATE USER finstant_kb_reader WITH PASSWORD 'kb_reader_secure_123'; GRANT CONNECT ON DATABASE finstant_kb TO finstant_kb_reader; GRANT USAGE ON SCHEMA public TO finstant_kb_reader; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;"
 ```
 
-> **Automated Alternative (Python):** You can also run `python setup_db.py` inside the `backend/` folder to automatically create databases, roles, and permissions in one step.
+> **Automated Alternative (Python):** You can also run `python setup_db.py` inside the `backend/` folder to automatically create databases, roles, and apply schemas in one command.
 
 ---
 
-### 3️⃣ Backend Setup (Terminal Commands)
+### 3️⃣ AWS Cognito & IAM Setup (Generate Cloud Credentials)
+
+Before configuring your application `.env` files, configure Amazon Cognito to generate your **User Pool ID**, **App Client ID**, **IAM API Credentials**, and **Initial Super Admin**:
+
+#### Step 3.1: Create the Cognito User Pool
+1. Log in to the [AWS Management Console](https://console.aws.amazon.com/) and navigate to **Amazon Cognito** (Select Region, e.g. `eu-north-1`).
+2. Click the orange **"Create user pool"** button.
+3. **Sign-in experience:**
+   * Select **Email** and **Username**.
+   * Click **Next**.
+4. **Security requirements:**
+   * Password policy: Select **Cognito defaults** (or custom organization policy).
+   * Multi-factor authentication (MFA): Select **No MFA** (or Optional).
+   * User account recovery: Select **Email only**.
+   * Click **Next**.
+5. **Sign-up experience:**
+   * Self-service sign-up: **Uncheck "Enable self-registration"** (FINSTΛNT is invite-only via Admin).
+   * Attribute verification: Check **"Allow Cognito to automatically send messages to verify and confirm"** → Select **Verify email address**.
+   * Required attributes: Ensure `email`, `given_name`, and `family_name` are selected.
+   * Click **Next**.
+6. **Message delivery:**
+   * Select **"Send email with Cognito"** (covers 50 free emails/day) or connect Amazon SES.
+   * Click **Next**.
+7. **Integrate your app:**
+   * User pool name: `finstant-user-pool`
+   * Initial app client name: `finstant-spa-client`
+   * Client secret: **Select "Don't generate a client secret"** ⚠️ *(Critical: Next.js Single Page Applications must not use a client secret).*
+   * Authentication flows: Ensure **`ALLOW_USER_SRP_AUTH`** and **`ALLOW_USER_PASSWORD_AUTH`** are checked.
+   * Click **Next** → Review and click **"Create user pool"**.
+8. **Save Credentials:**
+   * Copy your **User Pool ID** (e.g. `eu-north-1_gKxHAvqPm`) and **App Client ID** (e.g. `6uasv2coagguknngksvupeg2a0`).
+
+#### Step 3.2: Create User Groups (Roles)
+1. Inside your User Pool, click on the **"Groups"** tab.
+2. Click **"Create group"** and add the following 3 groups:
+   * **`SuperAdmin`** (Precedence: `1`) — Full system authority, master upload, user deletion.
+   * **`Admin`** (Precedence: `2`) — Financial uploads, user management, audit review.
+   * **`User`** (Precedence: `3`) — Standard employee, restricted to assigned sheets.
+
+#### Step 3.3: Create Programmatic IAM User for Backend API
+To allow the FastAPI backend to invite new users and reset passwords via `boto3`:
+1. In the AWS Console, search for **IAM** → Click **Users** → Click **"Create user"**.
+2. **User name:** `finstant-cognito-backend-admin` (Leave console access unchecked).
+3. Click **Next** → Under Permissions options, select **"Attach policies directly"**.
+4. Search for and check: **`AmazonCognitoPowerUser`**.
+5. Click **Next** → Click **"Create user"**.
+6. Click on `finstant-cognito-backend-admin` → Go to the **"Security credentials"** tab.
+7. Scroll down to **Access keys** → Click **"Create access key"** → Choose **"Application running outside AWS"**.
+8. Copy your **Access Key ID** (`AKIA...`) and **Secret Access Key** (`VgOm...`).
+
+#### Step 3.4: Create the Initial Super Admin User
+1. Go back to **Amazon Cognito** → **User Pools** → Select your pool.
+2. In the left sidebar, click **Users** → Click **"Create user"**.
+3. Select **"Send an email invitation"**.
+4. **Username / Email address:** Enter your **active, real corporate/personal email**.
+5. Check **"Mark email address as verified"** → Select **"Generate a password"**.
+6. Click **"Create user"**.
+7. **Assign to SuperAdmin Group:**
+   * Click on the newly created user's email → Scroll to **Group memberships** → Click **"Add user to group"**.
+   * Select **`SuperAdmin`** → Click **Add**.
+8. ⚠️ **Spam Folder Reminder:** AWS Cognito will send an automated invitation email with the subject *"Your temporary password"*. **Check your Spam / Junk folder** if the email is not in your primary inbox within 1–2 minutes.
+
+---
+
+### 4️⃣ Backend Setup (Terminal Commands & Environment)
+
+Now that you have your database and AWS credentials ready, set up the backend:
 
 Open a terminal in VS Code at the project root (`finance-knowledge-engine`):
 
@@ -120,7 +193,7 @@ pip install -r ../requirements.txt
 ```
 
 #### Configure Backend `.env` File:
-Create or edit `backend/.env`:
+Create or edit `backend/.env` and paste your credentials:
 ```ini
 # Database Connections
 DATABASE_URL=postgresql://postgres:12345678@localhost:5432/finstant_users
@@ -131,23 +204,23 @@ KB_DATABASE_URL=postgresql://finstant_kb_reader:kb_reader_secure_123@localhost:5
 AGENTROUTER_API_KEY=your_agentrouter_api_key
 AGENTROUTER_MODEL=claude-opus-5
 
-# AWS Cognito & IAM Credentials
+# AWS Cognito & IAM Credentials (From Step 3)
 COGNITO_REGION=eu-north-1
-COGNITO_USER_POOL_ID=your_cognito_user_pool_id
-COGNITO_APP_CLIENT_ID=your_cognito_app_client_id
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+COGNITO_USER_POOL_ID=eu-north-1_gKxHAvqPm
+COGNITO_APP_CLIENT_ID=6uasv2coagguknngksvupeg2a0
+AWS_ACCESS_KEY_ID=AKIAYWOZ623RVBKDFIWO
+AWS_SECRET_ACCESS_KEY=VgOmQWoyTbirbl93uNhKVRaSS+njO7h06ZvVIXpy
 ```
 
 Start the FastAPI backend server:
 ```bash
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
-*(Backend runs at `http://127.0.0.1:8000`)*
+*(Backend will run at `http://127.0.0.1:8000`)*
 
 ---
 
-### 4️⃣ Frontend Setup (Terminal Commands)
+### 5️⃣ Frontend Setup (Terminal Commands & Environment)
 
 Open a **new terminal tab** in VS Code:
 
@@ -162,41 +235,22 @@ npm install
 ```
 
 #### Configure Frontend `.env` File:
-Create or edit `frontend/.env`:
+Create or edit `frontend/.env` and paste your Cognito IDs:
 ```ini
 # Backend API URL
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
-# AWS Cognito Configuration
+# AWS Cognito Configuration (From Step 3)
 NEXT_PUBLIC_COGNITO_REGION=eu-north-1
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_cognito_user_pool_id
-NEXT_PUBLIC_COGNITO_APP_CLIENT_ID=your_cognito_app_client_id
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=eu-north-1_gKxHAvqPm
+NEXT_PUBLIC_COGNITO_APP_CLIENT_ID=6uasv2coagguknngksvupeg2a0
 ```
 
 Start the Next.js frontend development server:
 ```bash
 npm run dev
 ```
-*(Frontend runs at `http://localhost:3000`)*
-
----
-
-### 5️⃣ User Handling via AWS Cognito (Creating the Initial Super Admin)
-
-To establish your organization's first **Super Admin** account:
-
-1. **Log in to the AWS Console:**
-   * Navigate to **Amazon Cognito** → **User Pools**.
-   * Click on your configured user pool (`COGNITO_USER_POOL_ID`).
-2. **Create the Super Admin User:**
-   * In the left sidebar, click **Users** → Click the orange **"Create user"** button.
-   * Select **"Send an email invitation"**.
-   * Enter a valid, **active corporate or personal email address** as the Username / Email.
-   * Choose **"Generate a password"** (AWS will automatically create and email a temporary password).
-   * Click **"Create user"**.
-3. ⚠️ **Important Email Notice:**
-   * AWS Cognito will instantly dispatch an automated email with the subject *"Your temporary password"*.
-   * **Check your Spam / Junk folder** if the invitation email is not visible in your primary inbox within 1–2 minutes.
+*(Frontend will run at `http://localhost:3000`)*
 
 ---
 
@@ -227,11 +281,12 @@ npm run dev
 
 ---
 
-### 7️⃣ First-Time Login
+### 7️⃣ First-Time Super Admin Login
 
 1. Open your browser and navigate to: **`http://localhost:3000/login`**
 2. Enter the Super Admin email and the **Temporary Password** from your AWS invitation email.
 3. On first login, the system will prompt you to set your **New Permanent Password**.
+4. Once submitted, you are securely logged in and redirected to the dashboard!
 
 ---
 
