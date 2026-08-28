@@ -29,7 +29,7 @@ Ensure you have the following software installed on your machine:
 
 Clone the repository:
 ```bash
-git clone https://github.com/your-username/finance-knowledge-engine.git
+git clone link_of_repository_from_github
 ```
 
 Move into the project directory: (open terminal)
