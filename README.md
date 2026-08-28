@@ -8,10 +8,10 @@ FINSTΛNT is an enterprise-grade AI-powered financial knowledge engine that conv
 
 Ensure you have the following software installed on your machine:
 
-1. **Python 3.10+** (Verify: `python --version`)
+1. **Python 3.11** (Verify: `python --version`)
 2. **Node.js 18+ & npm** (Verify: `node -v` and `npm -v`)
 3. **PostgreSQL 14+** (Verify: `psql --version` or `createdb --version`) running on port `5432`
-4. **Git** (Verify: `git --version`)
+4. **Git** (Verify: `git --version`) (Assuming git and github is already setup on pc)
 5. **Visual Studio Code** (or your preferred IDE)
 6. **AWS Account** (with administrative access to Amazon Cognito & IAM)
 
@@ -32,9 +32,9 @@ Clone the repository:
 git clone https://github.com/your-username/finance-knowledge-engine.git
 ```
 
-Move into the project directory:
+Move into the project directory: (open terminal)
 ```bash
-cd finance-knowledge-engine
+cd finstant
 ```
 
 Open the codebase in VS Code:
@@ -47,12 +47,13 @@ code .
 ### 2️⃣ Database Setup (PostgreSQL Terminal Commands)
 
 FINSTΛNT utilizes two PostgreSQL databases:
-* `finstant_users`: Manages authentication, RBAC sheet permissions, chat sessions, and audit logs.
-* `finstant_kb`: Stores uploaded financial workbooks, normalized ledger tables, and knowledge data.
+* `finstant_users`
+* `finstant_kb`
 
 #### Step 2.1: Create the Databases
 
-Create the main application users database:
+Create the main application users database: (while creating enter your specified password to postgresql)
+
 ```bash
 createdb -U postgres finstant_users
 ```
@@ -89,8 +90,6 @@ createdb -U postgres finstant_kb
 psql -U postgres -d finstant_kb -c "CREATE USER finstant_kb_reader WITH PASSWORD 'kb_reader_secure_123'; GRANT CONNECT ON DATABASE finstant_kb TO finstant_kb_reader; GRANT USAGE ON SCHEMA public TO finstant_kb_reader; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO finstant_kb_reader;"
 ```
 
-> **Automated Alternative (Python):** You can also run `python setup_db.py` inside the `backend/` folder to automatically create databases, roles, and apply schemas in one command.
-
 ---
 
 ### 3️⃣ AWS Cognito & IAM Setup (Generate Cloud Credentials)
@@ -98,7 +97,7 @@ psql -U postgres -d finstant_kb -c "CREATE USER finstant_kb_reader WITH PASSWORD
 Before configuring your application `.env` files, configure Amazon Cognito to generate your **User Pool ID**, **App Client ID**, **IAM API Credentials**, and **Initial Super Admin**:
 
 #### Step 3.1: Create the Cognito User Pool
-1. Log in to the [AWS Management Console](https://console.aws.amazon.com/) and navigate to **Amazon Cognito** (Select Region, e.g. `eu-north-1`).
+1. Log in to the [AWS Management Console](https://console.aws.amazon.com/) then navigte or search for **Amazon Cognito** (Select Region, e.g. `eu-north-1`).
 2. Click the orange **"Create user pool"** button.
 3. **Sign-in experience:**
    * Select **Email** and **Username**.
@@ -161,7 +160,7 @@ To allow the FastAPI backend to invite new users and reset passwords via `boto3`
 
 Now that you have your database and AWS credentials ready, set up the backend:
 
-Open a terminal in VS Code at the project root (`finance-knowledge-engine`):
+Open a terminal in VS Code at the project root (`finstant`):
 
 Navigate into the backend directory:
 ```bash
@@ -196,8 +195,8 @@ pip install -r ../requirements.txt
 Create or edit `backend/.env` and paste your credentials:
 ```ini
 # Database Connections
-DATABASE_URL=postgresql://postgres:12345678@localhost:5432/finstant_users
-KB_INGESTION_URL=postgresql://postgres:12345678@localhost:5432/finstant_kb
+DATABASE_URL=postgresql://postgres:your_PASSWORD@localhost:5432/finstant_users
+KB_INGESTION_URL=postgresql://postgres:your_PASSWORD@localhost:5432/finstant_kb
 KB_DATABASE_URL=postgresql://finstant_kb_reader:kb_reader_secure_123@localhost:5432/finstant_kb
 
 # LLM & Reasoning Model
@@ -206,10 +205,10 @@ AGENTROUTER_MODEL=claude-opus-5
 
 # AWS Cognito & IAM Credentials (From Step 3)
 COGNITO_REGION=eu-north-1
-COGNITO_USER_POOL_ID=eu-north-1_gKxHAvqPm
-COGNITO_APP_CLIENT_ID=6uasv2coagguknngksvupeg2a0
-AWS_ACCESS_KEY_ID=AKIAYWOZ623RVBKDFIWO
-AWS_SECRET_ACCESS_KEY=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
+COGNITO_USER_POOL_ID=aws_user_pool_id
+COGNITO_APP_CLIENT_ID=cognito_app_client_key
+AWS_ACCESS_KEY_ID=aws_access_key
+AWS_SECRET_ACCESS_KEY=aws_secret_access_key
 ```
 
 Start the FastAPI backend server:
@@ -242,8 +241,8 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
 # AWS Cognito Configuration (From Step 3)
 NEXT_PUBLIC_COGNITO_REGION=eu-north-1
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=eu-north-1_gKxHAvqPm
-NEXT_PUBLIC_COGNITO_APP_CLIENT_ID=6uasv2coagguknngksvupeg2a0
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=aws_userpool_id
+NEXT_PUBLIC_COGNITO_APP_CLIENT_ID=cognito_app_client_id
 ```
 
 Start the Next.js frontend development server:
@@ -296,43 +295,13 @@ npm run dev
 2. Upload your organization's Master Excel Workbook (`.xlsx`).
 3. The system will automatically parse all sheets, normalize financial ledger headers, index entities into the Dynamic Semantic Grounder, and prepare the knowledge base for instant natural language queries.
 
----
+## Insturctions for the user:
 
-### 9️⃣ Adding New Users & Role-Based Access Control (RBAC)
-
-Admins and Super Admins can add team members directly from the web interface without touching the AWS console:
-
-1. **Navigate to User Management:**
-   * In the left navigation sidebar, click on **User Management** (`http://localhost:3000/users`).
-2. **Click "Add User":**
-   * Click the **"+ Add User"** button in the top right corner.
-3. **Fill in User Details:**
-   * **First Name** & **Last Name** (e.g. *John Doe*).
-   * **Active Email Address:** Enter the user's real, active corporate email (e.g. *john.doe@company.com*). 
-     > ⚠️ **Critical:** An active email is strictly required because AWS Cognito will immediately send their **Temporary Password** and login link to this address.
-   * **Designation / Job Title:** (e.g. *Senior Financial Analyst*, *Operations Manager*).
-   * **Role:**
-     * `User` (Standard restricted employee — requires explicit sheet permissions).
-     * `Admin` (Team manager — access to upload workbooks and view all datasets).
-   * Click **"Create User"**.
-4. **Temporary Password & Spam Folder Notice:**
-   * The newly created user receives an automated welcome email with their temporary credentials.
-   * Instruct the user to **check their Spam / Junk folder** if the invitation email is not visible in their primary inbox within 2 minutes.
-5. **Assigning Sheet-Level Permissions (RBAC):**
-   * On the user's card/row, click the **Permissions (Key 🔑)** icon.
-   * Check the boxes for the exact dataset sheets this user is authorized to view (e.g., `p&l`, `monthly_payroll`, `headcount_teamwise`).
-   * Click **"Save Permissions"**.
-   * *Instant Layer-0 Security:* The user will be strictly barred from querying any unassigned sheets with 0 token leakage.
-6. **User First-Time Login:**
-   * The user opens `http://localhost:3000/login`, enters their temporary password, sets their new permanent password, and enters their sandboxed environment.
-7. **Monitoring Query Analytics:**
-   * Click the **Analytics (Chart 📊)** icon next to any user in User Management to inspect their query history, lookup/analytical breakdowns, and security denial logs.
-
----
-
-## 🏗️ Architecture & Security Highlights
-
-* **Layer-0 RBAC Guard (< 2ms):** Frontline verification intercepts unauthorized table access before LLM execution with zero schema leakage.
-* **Dynamic Semantic Grounder:** Automatically resolves non-verbatim accounting terms (`"salaries of management"` → `"Salaries Management/CSG"`) across 100+ ledger lines.
-* **4-Turn Context Memory:** Retains multi-turn entity anchors so users can drill down on rolling monthly metrics without repeating subjects.
-* **Enterprise Query Audit:** Logs every query, cache hit, and security event into PostgreSQL for real-time compliance reporting.
+* If you have any changes in the database schema or finstant_db tables, then also change the schema in finstant/db_schemas 
+* Must add .env / venv files in gitignore if working on codebase for security of keys.
+## Enjoy using Finstant ! 
+Developed by team WhiteWalkers at DPL during summer internship 2026.
+Muhammad Yaseen
+Muhammad Ahmad
+Ramalah Amir
+Bilawal Hussain
