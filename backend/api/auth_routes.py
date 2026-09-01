@@ -48,8 +48,8 @@ async def sync_user(request: Request):
         engine = get_app_engine()
         with engine.connect() as conn:
             row = conn.execute(
-                text("SELECT id FROM app_user WHERE cognito_sub_id = :sub"),
-                {"sub": cognito_sub_id}
+                text("SELECT id, role, designation FROM app_user WHERE cognito_sub_id = :sub OR username = :uname"),
+                {"sub": cognito_sub_id, "uname": username}
             ).fetchone()
     
             if not row:
@@ -65,11 +65,35 @@ async def sync_user(request: Request):
                     }
                 )
                 conn.commit()
+            else:
+                user_id, current_role, current_desig = row
+                new_desig = designation if (groups and groups[0] in ["SuperAdmin", "Admin"]) else (current_desig or designation)
+                conn.execute(
+                    text("""
+                        UPDATE app_user 
+                        SET cognito_sub_id = :sub,
+                            role = :role,
+                            designation = :desig,
+                            first_name = CASE WHEN :fname != 'User' AND :fname != '' THEN :fname ELSE first_name END,
+                            last_name = CASE WHEN :lname != '' THEN :lname ELSE last_name END
+                        WHERE id = :id
+                    """),
+                    {
+                        "sub": cognito_sub_id,
+                        "role": computed_role,
+                        "desig": new_desig,
+                        "fname": first_name,
+                        "lname": last_name,
+                        "id": user_id
+                    }
+                )
+                conn.commit()
     
         return {"status": "success", "message": "User synced successfully"}
     except Exception as exc:
         err_str = traceback.format_exc()
         return JSONResponse(status_code=500, content={"detail": err_str})
+
 
 
 @router.get("/me")

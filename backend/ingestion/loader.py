@@ -37,3 +37,22 @@ class DataLoader:
                 chunksize=1000
             )
             print(f"Successfully loaded {len(df)} rows into '{table_name}'.")
+
+        # Dynamically grant read permissions to the user defined in KB_DATABASE_URL (Zero hardcoding)
+        import os
+        from sqlalchemy.engine.url import make_url
+        from dotenv import load_dotenv
+        load_dotenv()
+        kb_read_url = os.environ.get("KB_DATABASE_URL")
+        if kb_read_url:
+            try:
+                reader_user = make_url(kb_read_url).username
+                if reader_user:
+                    with self.engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
+                        conn.execute(text(f'GRANT USAGE ON SCHEMA public TO "{reader_user}"'))
+                        conn.execute(text(f'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{reader_user}"'))
+                        conn.execute(text(f'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO "{reader_user}"'))
+                    print(f"Successfully synchronized read permissions for '{reader_user}'.")
+            except Exception as e:
+                print(f"Warning: Could not sync reader permissions: {e}")
+

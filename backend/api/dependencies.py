@@ -59,10 +59,11 @@ def get_current_user(request: Request) -> dict:
             text("""
                 SELECT id, username, role, first_name, last_name, designation
                 FROM app_user
-                WHERE cognito_sub_id = :sub
+                WHERE cognito_sub_id = :sub OR username = :uname
             """),
-            {"sub": cognito_sub_id}
+            {"sub": cognito_sub_id, "uname": claims.get("email", "")}
         ).fetchone()
+
 
         if not row:
             # The user exists in Cognito but hasn't been synced to the local DB yet.

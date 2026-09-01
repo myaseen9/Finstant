@@ -240,6 +240,17 @@ async def get_uploads(current_user: dict = Depends(require_admin)):
             for row in rows
         ]
 
+
+@router.delete("/clear-upload-history")
+async def clear_upload_history(current_user: dict = Depends(require_admin)):
+    """Clear all records from upload history without touching knowledge tables."""
+    engine = get_app_engine()
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM file_upload"))
+        conn.commit()
+    return {"status": "success", "message": "Upload history cleared."}
+
+
 from pydantic import BaseModel
 import boto3
 import os
@@ -254,6 +265,40 @@ async def get_tables(current_user: dict = Depends(require_admin)):
     with kb_engine.connect() as conn:
         tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
         return [{"id": r[0], "name": r[0].replace('_', ' ').title()} for r in tables_res if r[0] != 'security_test']
+
+
+@router.get("/live-files")
+async def get_live_files(current_user: dict = Depends(require_admin)):
+    """Fetch all unique source files and active sheets currently stored in finstant_kb."""
+    kb_engine = get_kb_engine()
+    live_files = {}
+    try:
+        with kb_engine.connect() as conn:
+            tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
+            for (tbl,) in tables_res:
+                if tbl == 'security_test':
+                    continue
+                sheet_title = tbl.replace('_', ' ').title()
+                try:
+                    src_rows = conn.execute(text(f'SELECT DISTINCT _source_file FROM "{tbl}" WHERE _source_file IS NOT NULL')).fetchall()
+                    for (src,) in src_rows:
+                        if src:
+                            src_str = str(src)
+                            if src_str not in live_files:
+                                live_files[src_str] = []
+                            if sheet_title not in live_files[src_str]:
+                                live_files[src_str].append(sheet_title)
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Error fetching live files: {e}")
+
+    result = [
+        {"filename": fname, "sheets": sheets, "total_sheets": len(sheets)}
+        for fname, sheets in live_files.items()
+    ]
+    return {"live_files": result, "total_files": len(result)}
+
 
 class UpdateDesignationAccessRequest(BaseModel):
     designation: str
