@@ -333,10 +333,20 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
     """
     from sqlalchemy import text
     q = question.lower()
+    # 0. Identity & Greeting Fast Track (< 1ms)
+    clean_q = re.sub(r'[^a-zA-Z0-9\s]', '', q).strip()
+
+    if clean_q in ['hi', 'hello', 'hey', 'who are you', 'what are you', 'who built you', 'who made you', 'what is finstant', 'who is finstant', 'introduce yourself', 'what do you do', 'what can you do', 'help', 'tell me about yourself']:
+        return {
+            "matched": True,
+            "sql": "SYSTEM_IDENTITY",
+            "answer": "I am FINSTΛNT, an AI-powered financial intelligence engine developed to process your queries regarding available data in Knowledgebase, what would you like to ask?"
+        }
 
     # If asking for comparisons, multi-step explanations, or complex forecasts, let LLM handle it
     if any(w in q for w in ['why', 'explain', 'compare', 'difference between', 'trend', 'forecast', 'predict', 'chart', 'graph', 'plot', 'visualize', 'report', 'breakdown']):
         return None
+
 
     # 1. Detect Financial Year / Year
     fy_match = re.search(r'(?:fy\s*)?(\d{4})(?:[-/](\d{2,4}))?', q)

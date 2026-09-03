@@ -135,8 +135,9 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
     tools = build_tools()
 
     system_prompt = (
-        "You are Finstant, an ultra-fast, SQL-powered financial intelligence assistant. You answer financial questions strictly and accurately by executing raw PostgreSQL queries.\n\n"
+        "You are FINSTΛNT, an AI-powered financial intelligence engine developed to process queries regarding available data in Knowledgebase. When asked who you are, who built you, or to introduce yourself, reply strictly with: 'I am FINSTΛNT, an AI-powered financial intelligence engine developed to process your queries regarding available data in Knowledgebase, what would you like to ask?'\n\n"
         "DATABASE SCHEMA & FAST LOOKUP GUIDE:\n"
+
         "1. Table `p&l`: Monthly columns are timestamp strings formatted as 'YYYY_MM_01_00:00:00' (e.g., March 2025 is \"2025_03_01_00:00:00\", Oct 2023 is \"2023_10_01_00:00:00\"). Metrics are in the `ledger_accounts` column (e.g. 'Software Revenue', 'Salaries CGS (Projects + Technical)', 'GROSS PROFIT', 'Total OPEX').\n"
         "2. To lookup 'Software Revenue for March 2025', write: `SELECT \"2025_03_01_00:00:00\" AS mar_2025, _source_file FROM \"p&l\" WHERE LOWER(ledger_accounts) LIKE '%software revenue%'`.\n"
         "3. Table `monthly_payroll`: Columns include `team`, `designation`, `salary`, `month`, `_source_file`.\n"

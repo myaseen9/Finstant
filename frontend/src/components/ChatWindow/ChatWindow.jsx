@@ -32,7 +32,7 @@ const OwlHeroIntro = () => {
     } else if (phase === 'intro-holding') {
       timer = setTimeout(() => {
         setPhase('intro-deleting');
-      }, 10000); // 10-second intro hold
+      }, 5000); // 10-second intro hold
     } else if (phase === 'intro-deleting') {
       if (typedText.length > 0) {
         timer = setTimeout(() => {
