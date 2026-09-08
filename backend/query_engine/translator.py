@@ -3,8 +3,10 @@ import requests
 from .functions import WHITELISTED_FUNCTIONS, validate_function_call
 from .executor import execute_function
 import json
+import pathlib
 from dotenv import load_dotenv
 
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
 load_dotenv()
 
 def json_to_csv(data):
@@ -24,7 +26,7 @@ def json_to_csv(data):
 import boto3
 
 BEDROCK_REGION = os.getenv("BEDROCK_REGION", os.getenv("AWS_REGION", "us-east-1"))
-BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-5-haiku-20241022-v1:0")
 
 def get_bedrock_client():
     return boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)

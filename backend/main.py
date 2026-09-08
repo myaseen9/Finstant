@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import pathlib
 from dotenv import load_dotenv
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent / ".env")
 load_dotenv()
 from api.auth_routes import router as auth_router
 from api.admin_routes import router as admin_router
@@ -22,10 +24,16 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    model = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if anthropic_key:
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+        provider = "Direct Anthropic API"
+    else:
+        model = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-5-haiku-20241022-v1:0")
+        provider = "AWS Bedrock (IAM Role)"
     print("\n" + "="*50)
     print(" FINSTANT KNOWLEDGE ENGINE INITIALIZING... ")
-    print(f" LLM MODEL ACTIVE: {model} via AWS Bedrock (IAM Role) ")
+    print(f" LLM MODEL ACTIVE: {model} via {provider} ")
     print("="*50 + "\n")
     engine = get_app_engine()
     with engine.connect() as conn:
