@@ -423,25 +423,25 @@
   color: var(--color-text);
 }
 
-/* Active Chat Item: Pure Solid Capsule Pill (Matching Enlarz System in Reference) */
+/* Active Chat Item: Pure Solid Capsule Pill (High Contrast) */
 .chatItem.active {
   background: #FFFFFF !important;
-  color: #121212 !important;
+  color: #0F172A !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
   font-weight: 600;
 }
 
 .chatItem.active .itemFolderIcon {
-  color: #121212 !important;
+  color: #0F172A !important;
 }
 
 .chatItem.active .iconBtn {
-  color: #666666 !important;
+  color: #334155 !important;
 }
 
 .chatItem.active .iconBtn:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #121212 !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #0F172A !important;
 }
 
 .chatTitleContainer {
@@ -468,11 +468,15 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
 }
 
+.chatItem:hover .actions,
+.chatItem.active .actions,
 .pinnedActions {
-  display: flex;
+  opacity: 1;
 }
 
 .pinBtn {
