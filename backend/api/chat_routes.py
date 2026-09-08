@@ -246,54 +246,35 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
 
 
 @router.get("/chats")
+@router.get("/api/chats")
 async def get_chats(current_user: dict = Depends(get_current_user)):
     engine = get_app_engine()
     user_id = current_user["id"]
     with engine.connect() as conn:
-        try:
-            rows = conn.execute(
-                text("SELECT id, title, created_at FROM chat_session WHERE user_id = :uid AND (deleted_by_user IS NULL OR deleted_by_user = False) ORDER BY created_at DESC"),
-                {"uid": user_id}
-            ).fetchall()
-        except Exception:
-            rows = conn.execute(
-                text("SELECT id, title, created_at FROM chat_session WHERE user_id = :uid ORDER BY created_at DESC"),
-                {"uid": user_id}
-            ).fetchall()
+        rows = conn.execute(
+            text("SELECT id, title, created_at FROM chat_session WHERE user_id = :uid OR user_id = :uid_str ORDER BY created_at DESC"),
+            {"uid": user_id, "uid_str": str(user_id)}
+        ).fetchall()
         return [{"id": str(r[0]), "title": r[1], "created_at": r[2]} for r in rows]
 
 @router.get("/reports")
+@router.get("/api/reports")
 async def get_reports(current_user: dict = Depends(get_current_user)):
     engine = get_app_engine()
     user_id = current_user["id"]
     with engine.connect() as conn:
-        try:
-            rows = conn.execute(
-                text("""
-                    SELECT m.id, m.content, m.created_at, s.title, s.id as session_id 
-                    FROM chat_message m 
-                    JOIN chat_session s ON m.session_id = s.id 
-                    WHERE s.user_id = :uid 
-                      AND m.role = 'assistant' 
-                      AND m.content LIKE '%<!-- SHOW_PDF_BUTTON -->%' 
-                      AND (s.deleted_by_user IS NULL OR s.deleted_by_user = False)
-                    ORDER BY m.created_at DESC
-                """),
-                {"uid": user_id}
-            ).fetchall()
-        except Exception:
-            rows = conn.execute(
-                text("""
-                    SELECT m.id, m.content, m.created_at, s.title, s.id as session_id 
-                    FROM chat_message m 
-                    JOIN chat_session s ON m.session_id = s.id 
-                    WHERE s.user_id = :uid 
-                      AND m.role = 'assistant' 
-                      AND m.content LIKE '%<!-- SHOW_PDF_BUTTON -->%' 
-                    ORDER BY m.created_at DESC
-                """),
-                {"uid": user_id}
-            ).fetchall()
+        rows = conn.execute(
+            text("""
+                SELECT m.id, m.content, m.created_at, s.title, s.id as session_id 
+                FROM chat_message m 
+                JOIN chat_session s ON m.session_id = s.id 
+                WHERE (s.user_id = :uid OR s.user_id = :uid_str)
+                  AND m.role = 'assistant' 
+                  AND m.content LIKE '%<!-- SHOW_PDF_BUTTON -->%' 
+                ORDER BY m.created_at DESC
+            """),
+            {"uid": user_id, "uid_str": str(user_id)}
+        ).fetchall()
             
         return [
             {
@@ -308,6 +289,7 @@ async def get_reports(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/chats/{session_id}")
+@router.get("/api/chats/{session_id}")
 async def get_chat_history(session_id: str, current_user: dict = Depends(get_current_user)):
     engine = get_app_engine()
     with engine.connect() as conn:
@@ -317,7 +299,7 @@ async def get_chat_history(session_id: str, current_user: dict = Depends(get_cur
         ).fetchone()
         
         # If session exists and user is not admin and not owner, restrict
-        if owner and owner[0] != current_user["id"] and current_user.get("role") not in ["admin", "superadmin"]:
+        if owner and str(owner[0]) != str(current_user["id"]) and current_user.get("role") not in ["admin", "superadmin"]:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         rows = conn.execute(
@@ -331,21 +313,33 @@ async def get_chat_history(session_id: str, current_user: dict = Depends(get_cur
 @router.delete("/chat/{chat_id}")
 @router.delete("/api/chats/{chat_id}")
 async def delete_chat(chat_id: str, current_user: dict = Depends(get_current_user)):
-    """Soft-deletes a chat and automatically hides its messages and generated reports."""
+    """Permanently deletes a chat session and all its messages and generated reports."""
     engine = get_app_engine()
+    user_id = current_user["id"]
+    is_admin = current_user.get("role") in ["admin", "superadmin"]
+
     with engine.connect() as conn:
         try:
-            conn.execute(text("ALTER TABLE chat_session ADD COLUMN IF NOT EXISTS deleted_by_user BOOLEAN DEFAULT False"))
-            result = conn.execute(
-                text("UPDATE chat_session SET deleted_by_user = True WHERE id = :id AND user_id = :uid"),
-                {"id": chat_id, "uid": current_user["id"]}
+            # 1. Permanently delete all messages for this session
+            conn.execute(
+                text("DELETE FROM chat_message WHERE session_id = :sid"),
+                {"sid": str(chat_id)}
             )
+            # 2. Permanently delete the chat session
+            if is_admin:
+                conn.execute(
+                    text("DELETE FROM chat_session WHERE id = :id"),
+                    {"id": str(chat_id)}
+                )
+            else:
+                conn.execute(
+                    text("DELETE FROM chat_session WHERE id = :id AND (user_id = :uid OR user_id = :uid_str)"),
+                    {"id": str(chat_id), "uid": user_id, "uid_str": str(user_id)}
+                )
             conn.commit()
-            if result.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Chat not found")
-        except HTTPException:
-            raise
         except Exception as e:
-            print(f"Error soft deleting chat: {e}")
-            raise HTTPException(status_code=500, detail="Failed to delete chat")
-    return {"status": "success", "message": "Chat deleted"}
+            print(f"Error permanently deleting chat: {e}")
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to delete chat: {str(e)}")
+
+    return {"status": "success", "message": "Chat permanently deleted"}
