@@ -35,7 +35,7 @@ def get_bedrock_client():
 def call_anthropic_direct(system_instruction: str, messages: list, tools=None, force_tool=False):
     """Direct API call using Anthropic Messages API when ANTHROPIC_API_KEY is provided."""
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022").strip()
+    model = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001").strip()
 
     anthropic_tools = []
     if tools:
@@ -111,10 +111,13 @@ def call_anthropic_direct(system_instruction: str, messages: list, tools=None, f
 
     candidate_models = [
         model,
-        "claude-3-5-haiku-20241022",
-        "claude-3-5-haiku-latest",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-sonnet-latest"
+        "claude-haiku-4-5-20251001",
+        "claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-6",
+        "claude-sonnet-5",
+        "claude-opus-4-5-20251101",
+        "claude-opus-4-6",
+        "claude-opus-5"
     ]
     seen = set()
     model_list = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
