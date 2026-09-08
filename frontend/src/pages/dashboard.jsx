@@ -98,10 +98,7 @@ export default function Dashboard() {
     setError('');
     try {
       const query = yr !== 'All' ? `?year=${encodeURIComponent(yr)}` : '';
-      let res = await authenticatedFetch(`http://127.0.0.1:8000/api/dashboard${query}`);
-      if (!res.ok) {
-        res = await authenticatedFetch(`/api/dashboard${query}`);
-      }
+      let res = await authenticatedFetch(`/api/dashboard${query}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.detail || body.message || 'Failed to fetch dashboard data');

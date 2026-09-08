@@ -37,13 +37,17 @@ export default function Login() {
         const { completeNewPassword } = await import('@/api/auth');
         try {
           await completeNewPassword(cognitoUserRef, newPassword);
-          window.alert('Password updated successfully! The page will now refresh so you can log in.');
-          window.location.reload();
+          setSuccessMsg('Password updated successfully! Logging you in...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
           return;
         } catch (updateErr) {
           if (updateErr.message.includes('session can only be used once') || updateErr.message.includes('Invalid session')) {
-             window.alert('The AWS security timer expired. The page will refresh automatically so you can try again.');
-             window.location.reload();
+             setError('The security session expired. Refreshing page...');
+             setTimeout(() => {
+               window.location.reload();
+             }, 1500);
              return;
           }
           throw updateErr;
@@ -138,15 +142,16 @@ export default function Login() {
           /* STANDARD USER LOGIN FORM */
           <form onSubmit={handleLogin} className={styles.form}>
             <div className={styles.inputGroup}>
-              <label>Email Address</label>
+              <label>Email Address or Username</label>
               <input 
-                type="email" 
+                type="text" 
                 value={username} 
                 onChange={(e) => setUsername(e.target.value)} 
-                placeholder="user@example.com"
+                placeholder="user@example.com or username"
                 required
               />
             </div>
+
             <div className={styles.inputGroup}>
               <label>Password</label>
               <input 
@@ -212,18 +217,19 @@ export default function Login() {
             {resetStep === 1 ? (
               <form onSubmit={handleSendResetCode}>
                 <div className={styles.inputGroup}>
-                  <label>Email Address</label>
+                  <label>Email Address or Username</label>
                   <input 
-                    type="email" 
+                    type="text" 
                     value={username} 
                     onChange={(e) => setUsername(e.target.value)} 
-                    placeholder="Enter your registered email"
+                    placeholder="Enter your registered email or username"
                     required
                     autoFocus
                   />
                   <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    AWS will send a 6-digit confirmation code to your email.
+                    AWS will send a 6-digit confirmation code to your registered email.
                   </small>
+
                 </div>
 
                 {error && <div className={styles.errorMsg}>{error}</div>}

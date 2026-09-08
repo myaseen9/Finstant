@@ -45,7 +45,7 @@ export default function Sidebar({
 
   // Fetch saved reports on mount & when Files dropdown opens
   useEffect(() => {
-    authenticatedFetch('http://127.0.0.1:8000/reports')
+    authenticatedFetch('/reports')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setSidebarReports(data);

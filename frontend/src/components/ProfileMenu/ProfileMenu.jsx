@@ -1,5 +1,6 @@
 import { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '@/pages/_app';
+import { logout } from '@/api/auth';
 import styles from './ProfileMenu.module.css';
 import SettingsModal from './SettingsModal';
 
@@ -42,20 +43,18 @@ export default function ProfileMenu({
     }
   };
 
-  const userName = user?.first_name || user?.firstName
-    ? `${user.first_name || user.firstName} ${user.last_name || user.lastName || ''}`.trim()
-    : user?.username || 'User';
+  const userName = user?.name || user?.first_name || user?.username || 'User';
 
-  // Compute 2-letter initials (e.g. "MY" for Muhammad Yaseen)
+  // Compute 2-letter initials (e.g. "MY" for Muhammad Yaseen, "DK" for Dr Sara Khan, "SA" for Sara)
   const getInitials = (u) => {
     if (!u) return 'U';
-    const first = (u.first_name || u.firstName || '').trim();
-    const last = (u.last_name || u.lastName || '').trim();
-    if (first && last) {
-      return `${first[0]}${last[0]}`.toUpperCase();
-    }
-    if (first) {
-      return first.slice(0, 2).toUpperCase();
+    const rawName = (u.name || u.first_name || '').trim();
+    if (rawName) {
+      const parts = rawName.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return rawName.slice(0, 2).toUpperCase();
     }
     if (u.username) {
       const clean = u.username.replace(/[^a-zA-Z0-9]/g, '');
@@ -101,7 +100,10 @@ export default function ProfileMenu({
 
           <div className={styles.menuDivider}></div>
 
-          <button className={styles.menuItem} onClick={() => setUser(null)}>
+          <button className={styles.menuItem} onClick={async () => {
+            await logout();
+            setUser(null);
+          }}>
             <span className={styles.menuIcon}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

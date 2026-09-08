@@ -24,9 +24,10 @@ __pycache__/
 
 # ==========================================
 # Frontend & Next.js
-# ==============================
-node_modules/============
+# ==========================================
+node_modules/
 frontend/node_modules/
+
 .next/
 frontend/.next/
 out/

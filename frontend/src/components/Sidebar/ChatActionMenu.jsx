@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useContext } from 'react';
 import styles from './ChatActionMenu.module.css';
+import { AppContext } from '@/pages/_app';
 
 export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRename, onArchive, isPinned, buttonRef }) {
   const menuRef = useRef(null);
+  const { showHUD } = useContext(AppContext);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -26,7 +28,19 @@ export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRen
 
   return (
     <div className={styles.menuContainer} ref={menuRef} onClick={(e) => e.stopPropagation()}>
-      <button className={styles.menuItem} onClick={() => alert("Share feature coming soon!")}>
+      <button 
+        className={styles.menuItem} 
+        onClick={() => {
+          if (showHUD) {
+            showHUD({
+              title: 'Coming Soon',
+              subtitle: 'Share link feature will be available in next release',
+              type: 'info'
+            });
+          }
+          onClose();
+        }}
+      >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
         Share
       </button>

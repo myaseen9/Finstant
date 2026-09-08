@@ -21,92 +21,228 @@ def json_to_csv(data):
         csv_str += ",".join(str(row.get(k, "")) for k in keys) + "\n"
     return csv_str
 
-def call_agentrouter(system_instruction: str, messages: list, tools=None, force_tool=False):
-    """Direct API call strictly using claude-opus-5 on AgentRouter."""
-    API_KEY = os.environ.get("AGENTROUTER_API_KEY")
-    if not API_KEY:
-        raise Exception("AGENTROUTER_API_KEY is not set in the .env file")
-        
-    MODEL = os.environ.get("AGENTROUTER_MODEL", "claude-opus-5")
-    url = "https://agentrouter.org/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}",
-        "User-Agent": "claude-cli/1.0.60 (external, cli)"
-    }
-        
-    formatted_messages = [{"role": "system", "content": system_instruction}]
+import boto3
+
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", os.getenv("AWS_REGION", "us-east-1"))
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+
+def get_bedrock_client():
+    return boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+
+def call_anthropic_direct(system_instruction: str, messages: list, tools=None, force_tool=False):
+    """Direct API call using Anthropic Messages API when ANTHROPIC_API_KEY is provided."""
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+
+    anthropic_tools = []
+    if tools:
+        for t in tools:
+            func = t["function"]
+            anthropic_tools.append({
+                "name": func["name"],
+                "description": func["description"],
+                "input_schema": func["parameters"]
+            })
+
+    anthropic_messages = []
     for m in messages:
-        if m["role"] == "system": continue
-        if isinstance(m["content"], str):
-            formatted_messages.append({"role": m["role"], "content": m["content"]})
-            
+        role = m["role"]
+        if role == "system":
+            continue
+        content = m["content"]
+        blocks = []
+        if isinstance(content, str) and content:
+            blocks.append({"type": "text", "text": content})
+        if "tool_calls" in m and m["tool_calls"]:
+            for tc in m["tool_calls"]:
+                blocks.append({
+                    "type": "tool_use",
+                    "id": tc["id"],
+                    "name": tc["function"]["name"],
+                    "input": tc["function"]["arguments"]
+                })
+        if blocks:
+            b_role = "assistant" if role == "assistant" else "user"
+            anthropic_messages.append({"role": b_role, "content": blocks})
+
     payload = {
-        "model": MODEL,
-        "messages": formatted_messages,
+        "model": model,
+        "system": system_instruction,
+        "messages": anthropic_messages,
+        "max_tokens": 4096,
         "temperature": 0.0
     }
-    
-    if tools:
-        payload["tools"] = tools
+    if anthropic_tools:
+        payload["tools"] = anthropic_tools
         if force_tool:
-            payload["tool_choice"] = "required"
+            payload["tool_choice"] = {"type": "any"}
         else:
-            payload["tool_choice"] = "auto"
+            payload["tool_choice"] = {"type": "auto"}
 
-    import time
-    response = None
-    last_error = ""
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
 
-    for attempt in range(4):
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=45)
-        except Exception as net_err:
-            if attempt < 3:
-                time.sleep(1.0 * (attempt + 1))
-                continue
-            raise Exception(f"Connection to AI API failed: {net_err}")
-        
-        if response.status_code in [503, 429] and attempt < 3:
-            time.sleep(2 ** attempt)
+    candidate_models = [
+        model,
+        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-haiku-20240307"
+    ]
+    seen = set()
+    model_list = [m for m in candidate_models if not (m in seen or seen.add(m))]
+
+    last_err = None
+    for m_id in model_list:
+        payload["model"] = m_id
+        res = requests.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers, timeout=60)
+        if res.status_code == 200:
+            data = res.json()
+            content_text = ""
+            tool_calls = []
+            for block in data.get("content", []):
+                if block.get("type") == "text":
+                    content_text += block.get("text", "")
+                elif block.get("type") == "tool_use":
+                    tool_calls.append({
+                        "id": block["id"],
+                        "function": {
+                            "name": block["name"],
+                            "arguments": block["input"]
+                        }
+                    })
+            return {
+                "role": "assistant",
+                "content": content_text,
+                "tool_calls": tool_calls
+            }
+        else:
+            last_err = Exception(f"Anthropic API ({res.status_code}): {res.text}")
+            print(f"Anthropic model {m_id} notice: {res.text}. Trying fallback if available...")
             continue
-            
-        if response.status_code == 200:
-            break
+
+    raise last_err
+
+def call_bedrock(system_instruction: str, messages: list, tools=None, force_tool=False):
+    """Direct API call using AWS Bedrock Converse API with IAM role credentials."""
+    client = get_bedrock_client()
+
+    tool_config = None
+    if tools:
+        bedrock_tools = []
+        for t in tools:
+            func = t["function"]
+            bedrock_tools.append({
+                "toolSpec": {
+                    "name": func["name"],
+                    "description": func["description"],
+                    "inputSchema": {
+                        "json": func["parameters"]
+                    }
+                }
+            })
+        tool_config = {"tools": bedrock_tools}
+        if force_tool:
+            tool_config["toolChoice"] = {"any": {}}
         else:
-            last_error = response.text
-            if API_KEY in last_error:
-                last_error = last_error.replace(API_KEY, "********")
-            if attempt < 3:
-                time.sleep(1.0)
-                continue
-            raise Exception(f"AI Engine Error ({response.status_code}): {last_error}")
+            tool_config["toolChoice"] = {"auto": {}}
+
+    bedrock_messages = []
+    for m in messages:
+        role = m["role"]
+        if role == "system":
+            continue
         
-    data = response.json()
-    message_obj = data["choices"][0]["message"]
-    
-    tool_calls = []
-    if "tool_calls" in message_obj and message_obj["tool_calls"]:
-        for tc in message_obj["tool_calls"]:
-            if tc["type"] == "function":
-                args = {}
-                try:
-                    args = json.loads(tc["function"]["arguments"])
-                except Exception:
-                    pass
-                tool_calls.append({
-                    "id": tc["id"],
-                    "function": {
+        content = m["content"]
+        bedrock_content = []
+        
+        if isinstance(content, str) and content:
+            bedrock_content.append({"text": content})
+            
+        if "tool_calls" in m and m["tool_calls"]:
+            for tc in m["tool_calls"]:
+                bedrock_content.append({
+                    "toolUse": {
+                        "toolUseId": tc["id"],
                         "name": tc["function"]["name"],
-                        "arguments": args
+                        "input": tc["function"]["arguments"]
                     }
                 })
                 
-    return {
-        "role": "assistant",
-        "content": message_obj.get("content") or "",
-        "tool_calls": tool_calls
-    }
+        if bedrock_content:
+            b_role = "assistant" if role == "assistant" else "user"
+            bedrock_messages.append({
+                "role": b_role,
+                "content": bedrock_content
+            })
+
+    system_prompts = [{"text": system_instruction}]
+
+    candidate_models = [
+        BEDROCK_MODEL_ID,
+        "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "us.anthropic.claude-3-haiku-20240307-v1:0",
+        "anthropic.claude-3-haiku-20240307-v1:0"
+    ]
+    seen = set()
+    model_list = [m for m in candidate_models if not (m in seen or seen.add(m))]
+
+    last_err = None
+    for model_id in model_list:
+        try:
+            kwargs = {
+                "modelId": model_id,
+                "messages": bedrock_messages,
+                "system": system_prompts,
+                "inferenceConfig": {
+                    "temperature": 0.0,
+                    "maxTokens": 4096
+                }
+            }
+            if tool_config:
+                kwargs["toolConfig"] = tool_config
+
+            response = client.converse(**kwargs)
+            output_message = response["output"]["message"]
+            
+            content_text = ""
+            tool_calls = []
+            
+            for block in output_message.get("content", []):
+                if "text" in block:
+                    content_text += block["text"]
+                if "toolUse" in block:
+                    tu = block["toolUse"]
+                    tool_calls.append({
+                        "id": tu["toolUseId"],
+                        "function": {
+                            "name": tu["name"],
+                            "arguments": tu["input"]
+                        }
+                    })
+                    
+            return {
+                "role": "assistant",
+                "content": content_text,
+                "tool_calls": tool_calls
+            }
+        except Exception as e:
+            last_err = e
+            print(f"Bedrock model {model_id} notice: {e}. Trying fallback if available...")
+            continue
+
+    raise last_err
+
+def call_llm(system_instruction: str, messages: list, tools=None, force_tool=False):
+    """Hybrid router: Uses direct Anthropic API if ANTHROPIC_API_KEY is present; otherwise uses AWS Bedrock."""
+    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return call_anthropic_direct(system_instruction, messages, tools, force_tool=force_tool)
+    else:
+        return call_bedrock(system_instruction, messages, tools, force_tool=force_tool)
+
 
 def build_tools():
     tools = []
@@ -194,8 +330,14 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
         "- If a query is denied by security or if the tool returns 'Security Authorization Error: You are not authorized to query the dataset...':\n"
         "- You MUST reply strictly with EXACTLY ONE short line: 'You do not have access to this data.'\n"
         "- NEVER leak internal database column names, formulas, cell addresses, filenames, or hints about what data exists!\n"
-        "- If the user asked for multiple items where some are permitted and some restricted, answer ONLY the permitted part and add: 'You do not have access to [restricted item].'"
+        "- If the user asked for multiple items where some are permitted and some restricted, answer ONLY the permitted part and add: 'You do not have access to [restricted item].'\n\n"
+        "STRICT OUT-OF-SCOPE & NON-FINANCIAL GUARDRAIL:\n"
+        "- You are strictly an enterprise financial knowledge assistant built to query corporate datasets available in the Knowledgebase.\n"
+        "- If the user asks ANY question that is not related to querying financial data, accounting workbooks, metrics, or the Finstant system (e.g. general knowledge, world history, trivia, coding/programming, creative writing, advice, science, recipes, weather, casual chatter):\n"
+        "- You MUST reply strictly and ONLY with: 'Sorry I cannot respond.'\n"
+        "- DO NOT attempt to answer out-of-scope questions, offer external facts, or engage in general conversation."
     )
+
 
     messages = []
     if chat_history:
@@ -215,7 +357,7 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
             
             # Force tool usage on the very first turn to prevent premature text answers
             force_tool = (turn == 0)
-            message = call_agentrouter(system_prompt, messages, tools, force_tool=force_tool)
+            message = call_llm(system_prompt, messages, tools, force_tool=force_tool)
             
             if not message.get("tool_calls"):
                 print("LLM generated final text response.")

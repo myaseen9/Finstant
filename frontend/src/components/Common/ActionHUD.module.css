@@ -80,6 +80,42 @@
   animation: drawCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.3s forwards;
 }
 
+.errorCircleRing {
+  stroke: #ef4444;
+  stroke-width: 3;
+  stroke-dasharray: 180;
+  stroke-dashoffset: 180;
+  animation: drawCircle 0.5s ease-out 0.05s forwards;
+}
+
+.errorCross {
+  stroke: #ef4444;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: drawCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.3s forwards;
+}
+
+.infoCircleRing {
+  stroke: #f59e0b;
+  stroke-width: 3;
+  stroke-dasharray: 180;
+  stroke-dashoffset: 180;
+  animation: drawCircle 0.5s ease-out 0.05s forwards;
+}
+
+.infoExclamation {
+  stroke: #f59e0b;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: drawCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.3s forwards;
+}
+
 /* --------------------------------------------------------------------------
    Typography
    -------------------------------------------------------------------------- */

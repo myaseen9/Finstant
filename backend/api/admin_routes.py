@@ -255,10 +255,13 @@ from pydantic import BaseModel
 import boto3
 import os
 
-COGNITO_REGION = os.getenv("COGNITO_REGION", "eu-north-1")
+COGNITO_REGION = os.getenv("COGNITO_REGION", "us-east-1")
 USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
 
 @router.get("/tables")
+@router.get("/admin/tables")
+@router.get("/api/tables")
+@router.get("/api/admin/tables")
 async def get_tables(current_user: dict = Depends(require_admin)):
     """Fetch all actual tables in the finstant_kb database."""
     kb_engine = get_kb_engine()
@@ -326,6 +329,7 @@ class UpdateUserAccessRequest(BaseModel):
     sheets: list[str]
 
 @router.get("/user-access/{user_id}")
+@router.get("/api/admin/user-access/{user_id}")
 async def get_user_access(user_id: int, current_user: dict = Depends(require_admin)):
     engine = get_app_engine()
     with engine.connect() as conn:
@@ -333,6 +337,7 @@ async def get_user_access(user_id: int, current_user: dict = Depends(require_adm
         return [r[0] for r in res]
 
 @router.post("/user-access")
+@router.post("/api/admin/user-access")
 async def update_user_access(req: UpdateUserAccessRequest, current_user: dict = Depends(require_admin)):
     engine = get_app_engine()
     with engine.connect() as conn:
@@ -343,6 +348,7 @@ async def update_user_access(req: UpdateUserAccessRequest, current_user: dict = 
     return {"message": "User access override updated successfully"}
 
 @router.get("/user-analytics/{user_id}")
+@router.get("/api/admin/user-analytics/{user_id}")
 async def get_user_analytics(user_id: int, current_user: dict = Depends(require_admin)):
     """Aggregates audit_log into date-grouped metrics categorized by query type."""
     engine = get_app_engine()

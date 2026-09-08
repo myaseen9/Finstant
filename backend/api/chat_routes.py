@@ -93,13 +93,29 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
     kb_engine = get_kb_engine()
     user_id = current_user["id"]
 
+    clean_msg = request.message.strip().lower()
+    if any(q in clean_msg for q in ["who are you", "what are you", "who built you", "introduce yourself"]):
+        return ChatResponse(
+            answer="I am FINSTΛNT, an AI-powered financial intelligence engine developed to process your queries regarding available data in Knowledgebase, what would you like to ask?",
+            session_id=request.session_id or str(uuid.uuid4())
+        )
+
+    if any(q in clean_msg for q in ["poem", "joke", "recipe", "weather", "translate", "write code", "capital of", "who is"]):
+        return ChatResponse(
+            answer="Sorry I cannot respond.",
+            session_id=request.session_id or str(uuid.uuid4())
+        )
+
     with engine.connect() as conn:
         try:
             result = conn.execute(text("SELECT count(*) FROM file_upload WHERE status IN ('Completed', 'Ingesting')")).scalar()
             if result == 0:
-                return ChatResponse(answer="No data is currently available in the Knowledge Base", session_id=request.session_id or "")
+                with kb_engine.connect() as kb_conn:
+                    kb_tables = kb_conn.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")).scalar()
+                if kb_tables == 0:
+                    return ChatResponse(answer="No financial data is currently uploaded in the Knowledge Base. Please upload your financial Excel file in the Data Management panel to begin.", session_id=request.session_id or "")
         except Exception:
-            return ChatResponse(answer="No data is currently available in the Knowledge Base", session_id=request.session_id or "")
+            pass
 
     session_id = request.session_id
 

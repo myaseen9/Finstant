@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post("/sync")
 async def sync_user(request: Request):
     """
-    Called by the frontend immediately after a successful Cognito login.
+    Called by the frontend immediately after a successful Cognito login. 
     Decodes the JWT and ensures the user exists in the local database.
     """
     auth_header = request.headers.get("Authorization", "")
@@ -27,7 +27,7 @@ async def sync_user(request: Request):
         claims = jwt.decode(
             token, 
             get_jwks(), 
-            algorithms=["RS256"],
+            algorithms=["RS256"], 
             audience=APP_CLIENT_ID, 
             issuer=f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}"
         )
@@ -37,8 +37,8 @@ async def sync_user(request: Request):
     import traceback
     try:
         cognito_sub_id = claims["sub"]
-        username = claims.get("email", "")
-        first_name = claims.get("given_name", "User")
+        username = claims.get("email") or claims.get("cognito:username") or claims.get("username", "")
+        first_name = claims.get("given_name") or claims.get("name") or claims.get("cognito:username") or "User"
         last_name = claims.get("family_name", "")
         groups = claims.get("cognito:groups", [])
         

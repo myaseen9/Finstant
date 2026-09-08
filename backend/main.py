@@ -22,10 +22,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    model = os.getenv("AGENTROUTER_MODEL", "claude-opus-5")
+    model = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
     print("\n" + "="*50)
     print(" FINSTANT KNOWLEDGE ENGINE INITIALIZING... ")
-    print(f" LLM MODEL ACTIVE: {model} via AgentRouter ")
+    print(f" LLM MODEL ACTIVE: {model} via AWS Bedrock (IAM Role) ")
     print("="*50 + "\n")
     engine = get_app_engine()
     with engine.connect() as conn:

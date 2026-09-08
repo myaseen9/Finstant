@@ -1,11 +1,13 @@
 import { CognitoUserPool, AuthenticationDetails, CognitoUser } from 'amazon-cognito-identity-js';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
 
 const poolData = {
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || 'eu-north-1_gKxHAvqPm',
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_APP_CLIENT_ID || '6uasv2coagguknngksvupeg2a0'
+  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || 'us-east-1_uE4RzWIhm',
+  ClientId: process.env.NEXT_PUBLIC_COGNITO_APP_CLIENT_ID || '1lqralnuo80d5q9ar1krd2o9ct'
 };
+
 const userPool = new CognitoUserPool(poolData);
 
 // Step 1: Sync Cognito user to local DB. Step 2: Fetch user profile.
@@ -164,16 +166,15 @@ export const authenticatedFetch = async (url, options = {}) => {
   }
 
   let fullUrl = url;
-  if (!url.startsWith('http')) {
-    let path = url;
-    if (path.startsWith('/api/admin/')) {
-      path = path.replace('/api/admin/', '/');
-    } else if (path.startsWith('/api/')) {
-      path = path.replace('/api/', '/');
-    }
-    if (!path.startsWith('/')) path = '/' + path;
-    fullUrl = `${API_BASE}${path}`;
+  if (fullUrl.startsWith('http://127.0.0.1:8000')) {
+    fullUrl = fullUrl.replace('http://127.0.0.1:8000', API_BASE);
+  } else if (fullUrl.startsWith('http://localhost:8000')) {
+    fullUrl = fullUrl.replace('http://localhost:8000', API_BASE);
+  } else if (!fullUrl.startsWith('http')) {
+    if (!fullUrl.startsWith('/')) fullUrl = '/' + fullUrl;
+    fullUrl = `${API_BASE}${fullUrl}`;
   }
+
 
   const response = await fetch(fullUrl, { ...options, headers });
   if (response.status === 401 && typeof window !== 'undefined') {

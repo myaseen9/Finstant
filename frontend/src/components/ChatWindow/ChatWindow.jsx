@@ -195,7 +195,7 @@ export default function ChatWindow({ chatId, setActiveChatId }) {
 
   useEffect(() => {
     if (chatId) {
-      authenticatedFetch(`http://127.0.0.1:8000/chats/${chatId}`)
+      authenticatedFetch(`/chats/${chatId}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -230,7 +230,7 @@ export default function ChatWindow({ chatId, setActiveChatId }) {
     setIsTyping(true);
 
     try {
-      const response = await authenticatedFetch('http://127.0.0.1:8000/chat', {
+      const response = await authenticatedFetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg.text, session_id: chatId })

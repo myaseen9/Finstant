@@ -1,4 +1,5 @@
 import { authenticatedFetch } from '../../api/auth';
+import { API_BASE } from '../../lib/api';
 import { useState, useEffect, useRef, useContext } from 'react';
 import { AppContext } from '@/pages/_app';
 import styles from './AdminPanel.module.css';
@@ -16,7 +17,7 @@ export default function AdminPanel() {
   const fileInputRef = useRef(null);
 
   const fetchHistory = () => {
-    authenticatedFetch('http://127.0.0.1:8000/uploads')
+    authenticatedFetch('/uploads')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setHistory(data);
@@ -29,7 +30,7 @@ export default function AdminPanel() {
     setLoadingLiveFiles(true);
     setShowLiveFilesModal(true);
     try {
-      const res = await authenticatedFetch('http://127.0.0.1:8000/live-files');
+      const res = await authenticatedFetch('/live-files');
       if (res.ok) {
         const data = await res.json();
         setLiveFilesData(data);
@@ -68,9 +69,10 @@ export default function AdminPanel() {
     const formData = new FormData();
     formData.append('file', file);
 
+    const base = API_BASE ? API_BASE : '';
     const url = replaceTarget 
-      ? `http://127.0.0.1:8000/upload?replace_target=${encodeURIComponent(replaceTarget)}`
-      : 'http://127.0.0.1:8000/upload';
+      ? `${base}/upload?replace_target=${encodeURIComponent(replaceTarget)}`
+      : `${base}/upload`;
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('finstant_token') : null;
@@ -149,12 +151,18 @@ export default function AdminPanel() {
     processUpload(file);
   };
 
-  const handleWipeAll = async () => {
+  const [showWipeModal, setShowWipeModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+
+  const handleWipeAll = () => {
     setShowMasterMenu(false);
-    if (!window.confirm("CRITICAL WARNING: This will permanently delete ALL uploaded files and completely wipe the Knowledge Base database. Are you absolutely sure?")) return;
-    
+    setShowWipeModal(true);
+  };
+
+  const confirmWipeAll = async () => {
+    setShowWipeModal(false);
     try {
-      const res = await authenticatedFetch('http://127.0.0.1:8000/wipe-knowledge-base', { method: 'DELETE' });
+      const res = await authenticatedFetch('/wipe-knowledge-base', { method: 'DELETE' });
       if (res.ok) {
         fetchHistory();
         if (showHUD) {
@@ -164,19 +172,34 @@ export default function AdminPanel() {
             type: 'warning'
           });
         }
-        alert("Knowledge Base has been completely wiped.");
       } else {
-        alert("Failed to wipe database.");
+        if (showHUD) {
+          showHUD({
+            title: 'Wipe Failed',
+            subtitle: 'Could not wipe knowledge base tables',
+            type: 'error'
+          });
+        }
       }
     } catch (err) {
-      alert("Network error.");
+      if (showHUD) {
+        showHUD({
+          title: 'Network Error',
+          subtitle: 'Connection lost during database wipe',
+          type: 'error'
+        });
+      }
     }
   };
 
-  const handleClearHistory = async () => {
-    if (!window.confirm("Are you sure you want to clear the upload history log? This will reset the history list without deleting active database tables.")) return;
+  const handleClearHistory = () => {
+    setShowClearModal(true);
+  };
+
+  const confirmClearHistory = async () => {
+    setShowClearModal(false);
     try {
-      const res = await authenticatedFetch('http://127.0.0.1:8000/clear-upload-history', { method: 'DELETE' });
+      const res = await authenticatedFetch('/clear-upload-history', { method: 'DELETE' });
       if (res.ok) {
         setHistory([]);
         if (showHUD) {
@@ -187,12 +210,25 @@ export default function AdminPanel() {
           });
         }
       } else {
-        alert("Failed to clear upload history.");
+        if (showHUD) {
+          showHUD({
+            title: 'Clear Failed',
+            subtitle: 'Could not reset upload history',
+            type: 'error'
+          });
+        }
       }
     } catch (err) {
-      alert("Network error.");
+      if (showHUD) {
+        showHUD({
+          title: 'Network Error',
+          subtitle: 'Connection lost during history clear',
+          type: 'error'
+        });
+      }
     }
   };
+
 
 
   const confirmReplace = () => {
@@ -333,7 +369,7 @@ export default function AdminPanel() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a href="http://127.0.0.1:8000/download-master" className={styles.downloadMasterBtn}>
+          <a href={`${API_BASE}/download-master`} className={styles.downloadMasterBtn}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -434,6 +470,88 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      {/* In-App Wipe Database Confirmation Modal */}
+      {showWipeModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Wipe Knowledge Base
+              </h3>
+              <button className={styles.closeBtn} onClick={() => setShowWipeModal(false)}>×</button>
+            </div>
+            <p className={styles.warningText} style={{ margin: '1rem 0 0.5rem', fontWeight: 600 }}>
+              Are you sure you want to permanently wipe the entire Knowledge Base?
+            </p>
+            <p className={styles.warningTextSub} style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              This will drop all uploaded dataset tables and reset financial analytics to a clean slate. This action cannot be undone.
+            </p>
+            <div className={styles.modalActions} style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className={styles.btnCancel} onClick={() => setShowWipeModal(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={confirmWipeAll}
+                style={{ 
+                  background: '#ef4444', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '10px', 
+                  padding: '0.6rem 1.25rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer' 
+                }}
+              >
+                Wipe Database
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Clear Upload History Confirmation Modal */}
+      {showClearModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Clear Upload History
+              </h3>
+              <button className={styles.closeBtn} onClick={() => setShowClearModal(false)}>×</button>
+            </div>
+            <p className={styles.warningText} style={{ margin: '1rem 0 0.5rem', fontWeight: 600 }}>
+              Reset the upload history log?
+            </p>
+            <p className={styles.warningTextSub} style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              This will clear the history list display without deleting active database tables or data.
+            </p>
+            <div className={styles.modalActions} style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className={styles.btnCancel} onClick={() => setShowClearModal(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={confirmClearHistory}
+                style={{ 
+                  background: 'var(--color-primary)', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '10px', 
+                  padding: '0.6rem 1.25rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer' 
+                }}
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

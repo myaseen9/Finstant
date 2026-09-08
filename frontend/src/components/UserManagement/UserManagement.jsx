@@ -19,7 +19,7 @@ export default function UserManagement() {
   const [selectedSheets, setSelectedSheets] = useState([]);
   const [isCustomDesignation, setIsCustomDesignation] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({ first_name: '', last_name: '' });
+  const [profileForm, setProfileForm] = useState({ name: '' });
   const [profileSaving, setProfileSaving] = useState(false);
   
   const { user: currentUser, showHUD } = useContext(AppContext);
@@ -31,8 +31,7 @@ export default function UserManagement() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    first_name: '',
-    last_name: '',
+    name: '',
     role: 'user',
     designation: 'Accountant'
   });
@@ -213,7 +212,7 @@ export default function UserManagement() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to create user');
+        throw new Error(data.detail || data.message || 'Failed to create user');
       }
 
       // Success
@@ -222,8 +221,7 @@ export default function UserManagement() {
       setFormData({
         username: '',
         password: '',
-        first_name: '',
-        last_name: '',
+        name: '',
         role: 'user',
         designation: 'Accountant'
       });
@@ -352,10 +350,22 @@ export default function UserManagement() {
         fetchUsers();
       } else {
         const d = await res.json();
-        alert(d.detail || 'Failed to update profile');
+        if (showHUD) {
+          showHUD({
+            title: 'Update Failed',
+            subtitle: d.detail || 'Failed to update profile',
+            type: 'error'
+          });
+        }
       }
     } catch (e) {
-      alert('Network error');
+      if (showHUD) {
+        showHUD({
+          title: 'Network Error',
+          subtitle: 'Connection lost during profile update',
+          type: 'error'
+        });
+      }
     } finally {
       setProfileSaving(false);
     }
@@ -417,12 +427,15 @@ export default function UserManagement() {
                   <td data-label="User">
                     <div className={styles.userInfo}>
                       <div className={styles.avatar}>
-                        {(user.first_name || user.username || 'U')[0].toUpperCase()}
-                        {(user.last_name && user.last_name[0]) ? user.last_name[0].toUpperCase() : ''}
+                        {(() => {
+                          const raw = (user.name || user.first_name || user.username || 'U').trim();
+                          const parts = raw.split(/\s+/).filter(Boolean);
+                          return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
+                        })()}
                       </div>
                       <div className={styles.userDetails}>
                         <span className={styles.fullName}>
-                          {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username}
+                          {user.name || user.first_name || user.username}
                         </span>
                         <span className={styles.username}>{user.username}</span>
                       </div>
@@ -450,7 +463,7 @@ export default function UserManagement() {
                         <button
                           className={styles.btnEditProfile}
                           onClick={() => {
-                            setProfileForm({ first_name: user.first_name || '', last_name: user.last_name || '' });
+                            setProfileForm({ name: user.name || user.first_name || '' });
                             setProfileEditOpen(true);
                           }}
                         >
@@ -466,14 +479,12 @@ export default function UserManagement() {
                           >
                             {user.is_active ? 'Deactivate' : 'Activate'}
                           </button>
-                          <div className={styles.dropdownContainer}>
-                            <button 
-                              className={styles.moreOptionsBtn}
-                              onClick={(e) => handleToggleDropdown(e, user)}
-                            >
-                              More Options
-                            </button>
-                          </div>
+                          <button 
+                            className={styles.moreOptionsBtn}
+                            onClick={(e) => handleToggleDropdown(e, user)}
+                          >
+                            More Options
+                          </button>
                         </>
                       )}
                     </div>
@@ -482,9 +493,7 @@ export default function UserManagement() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                    No users found.
-                  </td>
+                  <td colSpan="5" className={styles.emptyState}>No users found.</td>
                 </tr>
               )}
             </tbody>
@@ -499,12 +508,15 @@ export default function UserManagement() {
             <div className={styles.cardHeaderRow}>
               <div className={styles.userInfo}>
                 <div className={styles.avatar}>
-                  {(user.first_name || user.username || 'U')[0].toUpperCase()}
-                  {(user.last_name && user.last_name[0]) ? user.last_name[0].toUpperCase() : ''}
+                  {(() => {
+                    const raw = (user.name || user.first_name || user.username || 'U').trim();
+                    const parts = raw.split(/\s+/).filter(Boolean);
+                    return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
+                  })()}
                 </div>
                 <div className={styles.userDetails}>
                   <span className={styles.fullName}>
-                    {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username}
+                    {user.name || user.first_name || user.username}
                   </span>
                   <span className={styles.username}>{user.username}</span>
                 </div>
@@ -537,7 +549,7 @@ export default function UserManagement() {
                 <button
                   className={styles.btnEditProfile}
                   onClick={() => {
-                    setProfileForm({ first_name: user.first_name || '', last_name: user.last_name || '' });
+                    setProfileForm({ name: user.name || user.first_name || '' });
                     setProfileEditOpen(true);
                   }}
                 >
@@ -633,28 +645,20 @@ export default function UserManagement() {
             {error && <div className={styles.errorMessage}>{error}</div>}
             
             <form onSubmit={handleCreateUser}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>First Name</label>
-                  <input 
-                    type="text" 
-                    name="first_name" 
-                    className={styles.input} 
-                    value={formData.first_name}
-                    onChange={handleInputChange}
-                    required 
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Last Name (Optional)</label>
-                  <input 
-                    type="text" 
-                    name="last_name" 
-                    className={styles.input} 
-                    value={formData.last_name}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <div className={styles.formGroup}>
+                <label>Full Name</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  className={styles.input} 
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Dr Sara Khan"
+                  required 
+                />
+                <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  Note: The user can log in with their Name handle or Email address.
+                </small>
               </div>
               
               <div className={styles.formGroup}>
@@ -833,7 +837,7 @@ export default function UserManagement() {
             </div>
             
             <p className={styles.warningText}>
-              Are you sure you want to permanently delete <strong>{deleteModalUser.first_name} {deleteModalUser.last_name}</strong>?
+              Are you sure you want to permanently delete <strong>{deleteModalUser.name || deleteModalUser.first_name || deleteModalUser.username}</strong>?
             </p>
             <p className={styles.warningTextSub}>
               This action cannot be undone. User history and logs will be deleted permanently.
@@ -861,7 +865,7 @@ export default function UserManagement() {
             <div className={styles.modalHeader}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                User Analytics: {analyticsModalUser.first_name} {analyticsModalUser.last_name}
+                User Analytics: {analyticsModalUser.name || analyticsModalUser.first_name || analyticsModalUser.username}
               </h3>
               <button className={styles.closeBtn} onClick={() => { setAnalyticsModalUser(null); setAnalyticsData([]); }}>×</button>
             </div>
@@ -919,27 +923,17 @@ export default function UserManagement() {
               <button className={styles.closeBtn} onClick={() => setProfileEditOpen(false)}>×</button>
             </div>
             <form onSubmit={handleSaveProfile}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>First Name</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={profileForm.first_name}
-                    onChange={(e) => setProfileForm(p => ({ ...p, first_name: e.target.value }))}
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={profileForm.last_name}
-                    onChange={(e) => setProfileForm(p => ({ ...p, last_name: e.target.value }))}
-                  />
-                </div>
+              <div className={styles.formGroup}>
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ name: e.target.value })}
+                  placeholder="Enter full name"
+                  required
+                  autoFocus
+                />
               </div>
               <div className={styles.modalActions}>
                 <button type="button" className={styles.btnCancel} onClick={() => setProfileEditOpen(false)}>

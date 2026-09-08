@@ -11,7 +11,7 @@ export default function FilesModal({ isOpen, onClose, onSelectReport }) {
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      authenticatedFetch('http://127.0.0.1:8000/reports')
+      authenticatedFetch('/reports')
         .then(res => res.json())
         .then(data => {
           setReports(data);
