@@ -28,22 +28,6 @@ export default function ChatActionMenu({ isOpen, onClose, onPin, onDelete, onRen
 
   return (
     <div className={styles.menuContainer} ref={menuRef} onClick={(e) => e.stopPropagation()}>
-      <button 
-        className={styles.menuItem} 
-        onClick={() => {
-          if (showHUD) {
-            showHUD({
-              title: 'Coming Soon',
-              subtitle: 'Share link feature will be available in next release',
-              type: 'info'
-            });
-          }
-          onClose();
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-        Share
-      </button>
       <button className={styles.menuItem} onClick={onRename}>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         Rename

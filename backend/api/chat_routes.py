@@ -327,9 +327,11 @@ async def get_chat_history(session_id: str, current_user: dict = Depends(get_cur
         return [{"id": str(r[0]), "role": r[1], "text": r[2]} for r in rows]
 
 
+@router.delete("/chats/{chat_id}")
 @router.delete("/chat/{chat_id}")
+@router.delete("/api/chats/{chat_id}")
 async def delete_chat(chat_id: str, current_user: dict = Depends(get_current_user)):
-    """Soft-deletes a chat. Only the owning user can delete their own chats."""
+    """Soft-deletes a chat and automatically hides its messages and generated reports."""
     engine = get_app_engine()
     with engine.connect() as conn:
         try:
@@ -345,5 +347,5 @@ async def delete_chat(chat_id: str, current_user: dict = Depends(get_current_use
             raise
         except Exception as e:
             print(f"Error soft deleting chat: {e}")
-            return {"error": "Failed to delete chat"}
+            raise HTTPException(status_code=500, detail="Failed to delete chat")
     return {"status": "success", "message": "Chat deleted"}

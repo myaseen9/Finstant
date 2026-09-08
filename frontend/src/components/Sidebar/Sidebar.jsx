@@ -25,7 +25,7 @@ export default function Sidebar({
   isCollapsed = false,
   onToggleCollapse = () => {} 
 }) {
-  const { user } = useContext(AppContext);
+  const { user, showHUD } = useContext(AppContext);
   const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
@@ -80,10 +80,41 @@ export default function Sidebar({
     ).sort((a, b) => b.pinned - a.pinned));
   };
 
-  const handleDelete = (id, e) => {
-    e.stopPropagation();
+  const handleDelete = async (id, e) => {
+    if (e) e.stopPropagation();
+    
+    // 1. Optimistically remove from chats list
     setChats(prev => prev.filter(c => c.id !== id));
     if (activeChatId === id) setActiveChatId(null);
+
+    // 2. Cascade delete from active sidebar reports state
+    setSidebarReports(prev => prev.filter(r => r.session_id !== id));
+
+    // 3. Show Apple-style HUD
+    if (showHUD) {
+      showHUD({
+        title: 'Chat Deleted',
+        subtitle: 'Chat and generated files removed',
+        type: 'success'
+      });
+    }
+
+    // 4. Send DELETE request to backend
+    try {
+      let res = await authenticatedFetch(`/chats/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        res = await authenticatedFetch(`/api/chats/${id}`, { method: 'DELETE' });
+      }
+      
+      // Re-fetch reports from backend to ensure state consistency
+      const reportsRes = await authenticatedFetch('/reports');
+      if (reportsRes.ok) {
+        const data = await reportsRes.json();
+        if (Array.isArray(data)) setSidebarReports(data);
+      }
+    } catch (err) {
+      console.error("Failed to delete chat:", err);
+    }
   };
 
   const handleRenameStart = (chat, e) => {
