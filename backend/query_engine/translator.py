@@ -1,5 +1,6 @@
 import os
 import requests
+import uuid
 from .functions import WHITELISTED_FUNCTIONS, validate_function_call
 from .executor import execute_function
 import json
@@ -34,7 +35,7 @@ def get_bedrock_client():
 def call_anthropic_direct(system_instruction: str, messages: list, tools=None, force_tool=False):
     """Direct API call using Anthropic Messages API when ANTHROPIC_API_KEY is provided."""
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+    model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022").strip()
 
     anthropic_tools = []
     if tools:
@@ -47,25 +48,46 @@ def call_anthropic_direct(system_instruction: str, messages: list, tools=None, f
             })
 
     anthropic_messages = []
+    last_tool_ids = []
+
     for m in messages:
-        role = m["role"]
+        role = m.get("role")
         if role == "system":
             continue
-        content = m["content"]
+        content = m.get("content", "")
         blocks = []
-        if isinstance(content, str) and content:
-            blocks.append({"type": "text", "text": content})
-        if "tool_calls" in m and m["tool_calls"]:
-            for tc in m["tool_calls"]:
-                blocks.append({
-                    "type": "tool_use",
-                    "id": tc["id"],
-                    "name": tc["function"]["name"],
-                    "input": tc["function"]["arguments"]
-                })
-        if blocks:
-            b_role = "assistant" if role == "assistant" else "user"
-            anthropic_messages.append({"role": b_role, "content": blocks})
+
+        if role == "assistant":
+            if isinstance(content, str) and content:
+                blocks.append({"type": "text", "text": content})
+            if "tool_calls" in m and m["tool_calls"]:
+                last_tool_ids = []
+                for tc in m["tool_calls"]:
+                    tid = tc.get("id") or f"toolu_{uuid.uuid4().hex[:12]}"
+                    last_tool_ids.append(tid)
+                    blocks.append({
+                        "type": "tool_use",
+                        "id": tid,
+                        "name": tc["function"]["name"],
+                        "input": tc["function"]["arguments"]
+                    })
+            if blocks:
+                anthropic_messages.append({"role": "assistant", "content": blocks})
+
+        elif role == "user":
+            if last_tool_ids:
+                for tid in last_tool_ids:
+                    blocks.append({
+                        "type": "tool_result",
+                        "tool_use_id": tid,
+                        "content": str(content)
+                    })
+                last_tool_ids = []
+            else:
+                if isinstance(content, str) and content:
+                    blocks.append({"type": "text", "text": content})
+            if blocks:
+                anthropic_messages.append({"role": "user", "content": blocks})
 
     payload = {
         "model": model,
