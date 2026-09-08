@@ -112,12 +112,14 @@ def call_anthropic_direct(system_instruction: str, messages: list, tools=None, f
     candidate_models = [
         model,
         "claude-3-5-haiku-20241022",
+        "claude-3-5-haiku-latest",
         "claude-3-5-sonnet-20241022",
-        "claude-3-haiku-20240307"
+        "claude-3-5-sonnet-latest"
     ]
     seen = set()
-    model_list = [m for m in candidate_models if not (m in seen or seen.add(m))]
+    model_list = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
 
+    first_err = None
     last_err = None
     for m_id in model_list:
         payload["model"] = m_id
@@ -143,11 +145,14 @@ def call_anthropic_direct(system_instruction: str, messages: list, tools=None, f
                 "tool_calls": tool_calls
             }
         else:
-            last_err = Exception(f"Anthropic API ({res.status_code}): {res.text}")
-            print(f"Anthropic model {m_id} notice: {res.text}. Trying fallback if available...")
+            err_msg = f"Anthropic API ({res.status_code}) for model '{m_id}': {res.text}"
+            print(f"[ANTHROPIC NOTICE] {err_msg}")
+            if not first_err:
+                first_err = Exception(err_msg)
+            last_err = Exception(err_msg)
             continue
 
-    raise last_err
+    raise first_err or last_err
 
 def call_bedrock(system_instruction: str, messages: list, tools=None, force_tool=False):
     """Direct API call using AWS Bedrock Converse API with IAM role credentials."""
