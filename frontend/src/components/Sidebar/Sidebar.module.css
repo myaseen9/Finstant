@@ -469,14 +469,18 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
+  opacity: 0;
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chatItem:hover .actions,
 .chatItem.active .actions,
 .pinnedActions {
-  opacity: 1;
+  opacity: 1 !important;
+}
+
+.chatItem:hover .iconBtn {
+  color: var(--color-text, #FFFFFF);
 }
 
 .pinBtn {
