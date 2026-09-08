@@ -13,6 +13,24 @@ from sqlalchemy import text
 MODEL_NAME = 'BAAI/bge-small-en-v1.5'
 _model = None
 
+FINANCIAL_ACRONYMS = [
+    (r'\bgp\s*%\b', 'gross profit margin percentage'),
+    (r'\bgp\s*margin\b', 'gross profit margin'),
+    (r'\bgp\b', 'gross profit'),
+    (r'\bcgs\b', 'salaries cgs cost of goods'),
+    (r'\bcogs\b', 'cost of goods sold cgs'),
+    (r'\bopex\b', 'total opex operating expenses'),
+    (r'\bhc\b', 'headcount total headcount'),
+    (r'\bebitda\b', 'ebitda operating income'),
+    (r'\bfy\b', 'fiscal year')
+]
+
+def expand_financial_acronyms(text: str) -> str:
+    expanded = text
+    for pattern, replacement in FINANCIAL_ACRONYMS:
+        expanded = re.sub(pattern, replacement, expanded, flags=re.IGNORECASE)
+    return expanded
+
 def get_embedding_model():
     global _model
     if _model is None:
@@ -396,7 +414,37 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                         "answer": f"Revenue for {found_month} ({clean_fy}) was PKR {val:,.2f}.\n\nSource: {sheet} sheet, {found_month} row, Revenue column — {sf}."
                     }
 
-        # Pattern 2: Single Month Gross Profit / Profit
+        # Pattern 2a: Single Month Gross Profit Margin % / GP Margin
+        is_gp_margin = (
+            any(w in q for w in ['gp%', 'gp %', 'gp margin', 'gross profit %', 'gross profit margin', 'margin %', 'gross margin'])
+            or (any(w in q for w in ['gp', 'gross profit']) and any(w in q for w in ['margin', '%', 'percentage', 'ratio']))
+        )
+        if found_month and is_gp_margin:
+            if not check_access('kpi'): return None
+            sql = "SELECT month, gp_margin, _source_file, _sheet_name FROM kpi WHERE LOWER(month) = :m"
+            params = {"m": found_month.lower()}
+            if source_file_pattern:
+                sql += " AND _source_file ILIKE :sf"
+                params["sf"] = source_file_pattern
+            sql += " LIMIT 1"
+            try:
+                with kb_engine.connect() as conn:
+                    row = conn.execute(text(sql), params).fetchone()
+                    if row and row[1] is not None:
+                        val = float(row[1])
+                        formatted_val = f"{val * 100:.2f}%" if (0.0 < val <= 1.0) else f"{val:.2f}%"
+                        sf = row[2]
+                        sheet = row[3] or "KPI"
+                        clean_fy = sf.replace('_data_-_Dummy.xlsx','').replace('_',' ')
+                        return {
+                            "matched": True,
+                            "sql": sql,
+                            "answer": f"Gross Profit Margin for {found_month} ({clean_fy}) was {formatted_val}.\n\nSource: {sheet} sheet, {found_month} row, GP Margin column — {sf}."
+                        }
+            except Exception:
+                pass
+
+        # Pattern 2b: Single Month Gross Profit / Profit (Amount)
         if found_month and any(w in q for w in ['gross profit', 'profit', 'gp']) and not any(w in q for w in ['margin', '%', 'percentage', 'ratio']):
             if not check_access('kpi'): return None
             sql = "SELECT month, gross_profit, _source_file, _sheet_name FROM kpi WHERE LOWER(month) = :m"
@@ -535,8 +583,11 @@ class EntityGrounder:
         if not self.vocab or (time.time() - self.last_refresh > 600):
             self.refresh(kb_engine)
 
-        q_clean = re.sub(r'[^a-zA-Z0-9\s]', ' ', question).lower()
+        expanded_q = expand_financial_acronyms(question)
+        q_clean = re.sub(r'[^a-zA-Z0-9\s]', ' ', expanded_q).lower()
         q_words = set(q_clean.split())
+        
+        is_pct_query = any(w in question.lower() for w in ['%', 'percent', 'percentage', 'margin', 'gp%', 'gp %', 'gp margin', 'ratio'])
         
         matches = []
         for item in self.vocab:
@@ -547,6 +598,18 @@ class EntityGrounder:
             matching_words = [w for w in term_words if w in q_words or any(qw.startswith(w) or w.startswith(qw) for qw in q_words if len(qw) > 3)]
             
             boost = len(matching_words) * 20
+            
+            # If user explicitly asked for percentage/margin (e.g. gp%, gp margin, margin %)
+            if is_pct_query:
+                if any(pw in clean_term for pw in ['margin', 'percent', 'percentage', 'ratio', 'gp margin']):
+                    boost += 50
+                elif clean_term in ['gross profit', 'profit'] and not any(pw in clean_term for pw in ['margin', 'percent', 'percentage']):
+                    boost -= 40
+            else:
+                # If user asked for absolute profit/amount without margin/%
+                if any(pw in clean_term for pw in ['margin', 'percent', 'percentage']):
+                    boost -= 30
+            
             final_score = score_set + boost
             
             if matching_words or score_set >= 70:

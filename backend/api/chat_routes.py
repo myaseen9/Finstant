@@ -53,8 +53,9 @@ def extract_context_anchor_from_history(chat_history: list, current_message: str
         'travel & leap expenses', 'travel & leap', 'travel expenses',
         'software revenue', 'total net revenue', 'net revenue', 'revenue',
         'salaries cgs', 'salaries', 'monthly payroll', 'payroll',
-        'gross profit', 'gp %', 'gp margin', 'total costs',
-        'total opex', 'operating expenses', 'rent', 'electricity', 'legal'
+        'gross profit margin %', 'gross profit margin', 'gross profit %', 'gross profit', 'gp %', 'gp margin', 'gp%', 'gp', 'total costs',
+        'total opex', 'operating expenses', 'rent', 'electricity', 'legal',
+        'headcount', 'closing headcount', 'total headcount', 'ebitda'
     ]
     has_explicit_metric = any(m in q_lower for m in known_metrics)
 
