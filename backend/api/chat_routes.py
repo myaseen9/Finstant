@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 import json
+import traceback
 from sqlalchemy import text
 from query_engine.executor import get_app_engine, log_audit
 from query_engine.functions import get_kb_engine
