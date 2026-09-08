@@ -37,31 +37,27 @@
 .brandRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 1.15rem 0.4rem 1.05rem;
+  justify-content: space-between;
+  padding: 0.4rem 0.4rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
   flex-shrink: 0;
 }
 
 .brandLogoTitle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0;
+  gap: 0.65rem;
   cursor: pointer;
   user-select: none;
-  width: 100%;
 }
 
 .brandLogo {
-  width: 86px;
-  height: 86px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   flex-shrink: 0;
   display: block;
-  margin-right: -6px;
 }
 
 [data-theme='dark'] .brandLogo,
@@ -71,13 +67,10 @@
 
 .brandTitle {
   font-weight: 800;
-  font-size: 1.65rem;
+  font-size: 1.15rem;
   color: var(--color-text);
   letter-spacing: 0.5px;
   line-height: 1;
-  display: flex;
-  align-items: center;
-  transform: translateY(9px);
 }
 
 .edgeDockBtn {
