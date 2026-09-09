@@ -91,8 +91,7 @@ def extract_context_anchor_from_history(chat_history: list, current_message: str
 
 GENERIC_IDENTITY_RESPONSE = (
     "I'm Finstant, your financial data assistant. "
-    "Ask me a question about your organization's uploaded financial data — "
-    "for example, revenue, expenses, payroll, or headcount — "
+    "Ask me a question about your organization's uploaded financial data "
     "and I'll give you a direct answer sourced from your records."
 )
 
