@@ -344,21 +344,54 @@ FINANCIAL_MONTH_NAMES = {
     '09': 'September', '10': 'October', '11': 'November', '12': 'December'
 }
 
+GENERIC_IDENTITY_RESPONSE = (
+    "I'm Finstant, your financial data assistant. "
+    "Ask me a question about your organization's uploaded financial data — "
+    "for example, revenue, expenses, payroll, or headcount — "
+    "and I'll give you a direct answer sourced from your records."
+)
+
+UNIVERSAL_OUT_OF_SCOPE_REFUSAL = (
+    "Sorry, I cannot respond to this query. Ask me only questions related to your financial data uploaded."
+)
+
 def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = None, is_admin: bool = True) -> Optional[dict]:
     """
     Sub-50ms deterministic SQL query compiler and executor for routine corporate financial lookups.
     Returns dict with answer, sql, lineage if matched, or None if query requires LLM reasoning.
     """
     from sqlalchemy import text
-    q = question.lower()
-    # 0. Identity & Greeting Fast Track (< 1ms)
+    q = question.lower().strip()
     clean_q = re.sub(r'[^a-zA-Z0-9\s]', '', q).strip()
 
-    if clean_q in ['hi', 'hello', 'hey', 'who are you', 'what are you', 'who built you', 'who made you', 'what is finstant', 'who is finstant', 'introduce yourself', 'what do you do', 'what can you do', 'help', 'tell me about yourself']:
+    # 0a. Universal Out-of-Scope refusal (No role exempt)
+    out_of_scope_keywords = [
+        "poem", "joke", "recipe", "weather", "translate", "write code", "coding",
+        "write a script", "write python", "capital of", "who is", "story", "song",
+        "essay", "trivia", "movie", "science", "sports", "president of", "prime minister",
+        "country", "gaming", "philosophy", "history", "politics", "horoscope", "astrology"
+    ]
+    if any(k in q for k in out_of_scope_keywords):
+        return {
+            "matched": True,
+            "sql": "OUT_OF_SCOPE",
+            "answer": UNIVERSAL_OUT_OF_SCOPE_REFUSAL
+        }
+
+    # 0b. Identity & Capabilities Generic Fast Track (< 1ms)
+    identity_phrases = [
+        'who are you', 'what are you', 'who built you', 'who made you', 'who created you',
+        'what is finstant', 'who is finstant', 'introduce yourself', 'what do you do',
+        'what can you do', 'tell me about yourself', 'what database', 'which database',
+        'database version', 'what ai model', 'which model', 'what llm', 'are you using aws',
+        'what is your stack', 'how are you built', 'what server', 'backend architecture',
+        'what technology', 'tech stack', 'your tech stack'
+    ]
+    if clean_q in ['hi', 'hello', 'hey', 'finstant', 'about finstant', 'finstant assistant', 'help'] or any(p in q for p in identity_phrases):
         return {
             "matched": True,
             "sql": "SYSTEM_IDENTITY",
-            "answer": "I am FINSTΛNT, an AI-powered financial intelligence engine developed to process your queries regarding available data in Knowledgebase, what would you like to ask?"
+            "answer": GENERIC_IDENTITY_RESPONSE
         }
 
     # If asking for comparisons, multi-step explanations, or complex forecasts, let LLM handle it

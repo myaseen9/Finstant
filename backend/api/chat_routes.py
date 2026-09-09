@@ -89,6 +89,49 @@ def extract_context_anchor_from_history(chat_history: list, current_message: str
     return contextual_query, current_message
 
 
+GENERIC_IDENTITY_RESPONSE = (
+    "I'm Finstant, your financial data assistant. "
+    "Ask me a question about your organization's uploaded financial data — "
+    "for example, revenue, expenses, payroll, or headcount — "
+    "and I'll give you a direct answer sourced from your records."
+)
+
+UNIVERSAL_OUT_OF_SCOPE_REFUSAL = (
+    "Sorry, I cannot respond to this query. Ask me only questions related to your financial data uploaded."
+)
+
+def is_identity_query(clean_msg: str) -> bool:
+    """
+    Catches bare product name, self-descriptions, capabilities, and infrastructure inquiries.
+    """
+    clean_stripped = re.sub(r'[^a-zA-Z0-9\s]', '', clean_msg).strip()
+    if clean_stripped in ["finstant", "about finstant", "hi finstant", "hello finstant", "hey finstant", "finstant assistant"]:
+        return True
+    
+    identity_phrases = [
+        "who are you", "what are you", "who built you", "who made you", "who created you",
+        "introduce yourself", "tell me about yourself", "what can you do", "how do you work",
+        "what is your name", "what are your capabilities", "what is finstant", "what do you do",
+        "help me", "what database", "which database", "database version", "what ai model",
+        "which model", "what llm", "are you using aws", "what is your stack", "how are you built",
+        "what server", "backend architecture", "what technology", "tech stack", "your tech stack"
+    ]
+    return any(p in clean_msg for p in identity_phrases)
+
+def is_out_of_scope_query(clean_msg: str) -> bool:
+    """
+    Universal scope gate: rejects general non-financial queries identically for ALL roles.
+    """
+    out_of_scope_keywords = [
+        "poem", "joke", "recipe", "weather", "translate", "write code", "coding",
+        "write a script", "write python", "capital of", "who is", "story", "song",
+        "essay", "trivia", "movie", "science", "sports", "president of", "prime minister",
+        "country", "gaming", "philosophy", "history", "politics", "horoscope", "astrology",
+        "how to cook", "fitness advice", "medical advice"
+    ]
+    return any(k in clean_msg for k in out_of_scope_keywords)
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current_user)):
     engine = get_app_engine()
@@ -96,15 +139,18 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
     user_id = current_user["id"]
 
     clean_msg = request.message.strip().lower()
-    if any(q in clean_msg for q in ["who are you", "what are you", "who built you", "introduce yourself"]):
+
+    # LAYER 0: Identity / Self-description Pre-Filter (Runs before role/RBAC check)
+    if is_identity_query(clean_msg):
         return ChatResponse(
-            answer="I am FINSTΛNT, an AI-powered financial intelligence engine developed to process your queries regarding available data in Knowledgebase, what would you like to ask?",
+            answer=GENERIC_IDENTITY_RESPONSE,
             session_id=request.session_id or str(uuid.uuid4())
         )
 
-    if any(q in clean_msg for q in ["poem", "joke", "recipe", "weather", "translate", "write code", "capital of", "who is"]):
+    # LAYER 0: Universal Out-of-Scope Scope Gate (Applies identically to ALL roles: user, admin, superadmin)
+    if is_out_of_scope_query(clean_msg):
         return ChatResponse(
-            answer="Sorry I cannot respond.",
+            answer=UNIVERSAL_OUT_OF_SCOPE_REFUSAL,
             session_id=request.session_id or str(uuid.uuid4())
         )
 
