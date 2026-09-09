@@ -255,7 +255,7 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
                 save_to_semantic_cache(request.message, answer, engine)
             else:
                 # 2. Dynamically prune the full database schema to relevant tables using contextual query
-                pruned_schema_context = prune_schema(contextual_query, schema_context, top_k=4)
+                pruned_schema_context = prune_schema(contextual_query, schema_context, top_k=8)
                 print(f"Pruned Schema size from {len(schema_context)} down to {len(pruned_schema_context)} tables")
                 
                 loop_result = run_query_loop(user_id, anchored_user_prompt, pruned_schema_context, chat_history=chat_history)

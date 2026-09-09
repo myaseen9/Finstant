@@ -37,9 +37,10 @@ def get_embedding_model():
         _model = TextEmbedding(MODEL_NAME)
     return _model
 
-def prune_schema(question: str, schema_context: dict, top_k: int = 6) -> dict:
+def prune_schema(question: str, schema_context: dict, top_k: int = 8) -> dict:
     """
     Ultra-fast (0.001ms) schema selector without heavy ONNX model CPU overhead.
+    Preserves all standard financial tables when total tables <= top_k.
     """
     if len(schema_context) <= top_k:
         return schema_context
@@ -51,6 +52,8 @@ def prune_schema(question: str, schema_context: dict, top_k: int = 6) -> dict:
         tbl_clean = tbl.lower().replace("_", " ").replace("-", " ")
         if tbl_clean in q_lower or any(word in q_lower for word in tbl_clean.split() if len(word) > 2):
             score += 10
+        if "kpi" in tbl.lower() and any(w in q_lower for w in ["revenue", "profit", "payroll", "margin", "gp", "ratio", "%", "highest", "lowest", "month", "kpi", "cost", "turnover"]):
+            score += 25
         if "p&l" in tbl.lower() and any(w in q_lower for w in ["revenue", "profit", "cgs", "cost", "margin", "expense", "opex", "income"]):
             score += 15
         if "payroll" in tbl.lower() or "salary" in tbl.lower():

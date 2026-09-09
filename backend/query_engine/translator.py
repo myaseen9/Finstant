@@ -326,10 +326,15 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
         "   - When a table is generated, keep the introductory text to a single concise sentence and follow immediately with the Markdown table and source citation.\n"
         "4. NEVER add filler conversational intros or preambles (e.g., NEVER say 'Based on the database query results...', 'I can see that...', 'According to the data...', 'Sure! Here is...'). Start immediately with the direct answer.\n\n"
         "DATABASE SCHEMA & FAST LOOKUP GUIDE:\n"
-        "1. Table `p&l`: Monthly columns are timestamp strings formatted as 'YYYY_MM_01_00:00:00' (e.g., March 2025 is \"2025_03_01_00:00:00\", Oct 2023 is \"2023_10_01_00:00:00\"). Metrics are in the `ledger_accounts` column (e.g. 'Software Revenue', 'Salaries CGS (Projects + Technical)', 'GROSS PROFIT', 'Gross Profit Margin %', 'Total OPEX').\n"
-        "2. To lookup 'Software Revenue for March 2025', write: `SELECT \"2025_03_01_00:00:00\" AS mar_2025, _source_file FROM \"p&l\" WHERE LOWER(ledger_accounts) LIKE '%software revenue%'`.\n"
-        "3. Table `monthly_payroll`: Columns include `team`, `designation`, `salary`, `month`, `_source_file`.\n"
-        "4. Always cast text numbers when aggregating: `NULLIF(REGEXP_REPLACE(col, '[^0-9.-]', '', 'g'), '')::numeric`.\n\n"
+        "1. Table `kpi`: Contains monthly row-based metrics: `month`, `revenue`, `gross_profit`, `total_costs`, `gp_%`, `payroll/revenue_%`, `_source_file`.\n"
+        "   - To find highest/lowest month or ratios (e.g. highest revenue in FY 2025-26 and its Payroll/Revenue %):\n"
+        "     `SELECT month, revenue, \"payroll/revenue_%\", _source_file FROM kpi WHERE _source_file ILIKE '%2025-26%' AND revenue IS NOT NULL ORDER BY revenue::numeric DESC LIMIT 1;`\n"
+        "   - CRITICAL: When columns contain special characters ('/', '%', '(', ')'), you MUST enclose them in double quotes in SQL (e.g. `\"payroll/revenue_%\"`, `\"gp_%\"`, `\"change_(%)\"`).\n"
+        "2. Table `gp_margins_salary_wise`: Contains `month`, `revenue`, `payroll`, `gp`, `gp_margins`, `hc`, `_source_file`.\n"
+        "3. Table `p&l`: Monthly columns are timestamp strings formatted as 'YYYY_MM_01_00:00:00' (e.g., March 2025 is \"2025_03_01_00:00:00\", Oct 2023 is \"2023_10_01_00:00:00\"). Metrics are in the `ledger_accounts` column (e.g. 'Software Revenue', 'Salaries CGS (Projects + Technical)', 'GROSS PROFIT', 'Gross Profit Margin %', 'Total OPEX').\n"
+        "   - To lookup 'Software Revenue for March 2025', write: `SELECT \"2025_03_01_00:00:00\" AS mar_2025, _source_file FROM \"p&l\" WHERE LOWER(ledger_accounts) LIKE '%software revenue%'`.\n"
+        "4. Table `monthly_payroll`: Columns include `month`, `pk_salary`, `usc_salary`, `total_salary`, `total_hc`, `_source_file`.\n"
+        "5. Always cast text numbers when aggregating: `NULLIF(REGEXP_REPLACE(col, '[^0-9.-]', '', 'g'), '')::numeric`.\n\n"
         "STRICT MARKDOWN TABLE FORMATTING RULES:\n"
         "- When outputting tables, EVERY ROW MUST BE ON A SEPARATE NEW LINE (\\n). NEVER concatenate rows horizontally.\n"
         "- Every table MUST have a standard header divider row with hyphens: `| :--- | :--- | :--- |`.\n\n"
@@ -382,7 +387,7 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
     )
 
     accumulated_lineage = []
-    max_turns = 6
+    max_turns = 8
     turn = 0
 
     try:
