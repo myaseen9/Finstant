@@ -14,6 +14,7 @@
 @import './tokens.css';
 @import './themes.css';
 @import './base.css';
+@import './landing.css';
 
 /* --------------------------------------------------------------------------
    Theme transition — scoped, not global.
@@ -31,17 +32,28 @@
    cross-fade while every panel on top of it snapped.
    -------------------------------------------------------------------------- */
 .theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
+.theme-transitioning * {
   transition:
     background-color var(--dur-theme) var(--ease-in-out),
-    border-color var(--dur-theme) var(--ease-in-out),
-    color var(--dur-theme) var(--ease-in-out),
-    fill var(--dur-theme) var(--ease-in-out),
-    stroke var(--dur-theme) var(--ease-in-out),
-    box-shadow var(--dur-theme) var(--ease-in-out) !important;
+    border-color     var(--dur-theme) var(--ease-in-out),
+    color            var(--dur-theme) var(--ease-in-out) !important;
   /* Transform and opacity are excluded above, so an element mid-entrance
      keeps its own timing instead of being dragged to --dur-theme. */
   transition-delay: 0ms !important;
+}
+
+/* SVG internals (Recharts paths, rects, labels, gradient stops) are painted
+   with inline attributes, not CSS custom props — transitioning them is pure
+   overhead that causes the visible frame-drop on theme switch. */
+.theme-transitioning svg *,
+.theme-transitioning canvas {
+  transition: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode Logo SVG Auto-Inversion (Crisp White Owl)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] img[src*="logo.svg"],
+:root[data-theme="dark"] img[src*="logo.svg"] {
+  filter: brightness(0) invert(1) !important;
 }

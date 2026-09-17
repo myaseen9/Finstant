@@ -21,18 +21,22 @@ html {
   min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  touch-action: manipulation;
+  touch-action: auto;
   -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
 }
 
 body {
   min-height: 100dvh;
   max-width: 100vw;
   overflow-x: hidden;
-  overscroll-behavior-y: none;
+  overflow-y: auto;
+  touch-action: auto;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--canvas);
   color: var(--text);
-  font-family: var(--font-body);
+  font-family: var(--font-body) !important;
   font-size: var(--text-base);
   font-weight: var(--weight-regular);
   line-height: var(--leading-normal);
@@ -42,11 +46,28 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+button, input, select, textarea, optgroup, label {
+  font-family: var(--font-body) !important;
+}
+
+/* Dedicated exemption for brand logo name as requested */
+.brandTitle,
+.brandLogoTitle,
+.brandWordmark,
+[class*="brandTitle"],
+[class*="brandLogoTitle"],
+[class*="brandWordmark"],
+[class*="brandTitle"] span,
+[class*="brandLogoTitle"] span,
+[class*="brandWordmark"] span {
+  font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif !important;
+}
+
 /* --------------------------------------------------------------------------
    Elements
    -------------------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
+  font-family: var(--font-heading) !important;
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);

@@ -17,22 +17,17 @@
 .header {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 1.25rem;
   margin-bottom: 2rem;
-}
-
-@media (min-width: 900px) {
-  .header {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
+  width: 100%;
 }
 
 .titleGroup {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  width: 100%;
 }
 
 .title {
@@ -75,15 +70,53 @@
   box-shadow: 0 0 6px #10b981;
 }
 
-/* Controls Bar (Filter Pills & View Toggles) */
+/* Controls Bar (Filter Pills & View Toggles) - Set Below Title Group */
 .controlsBar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-.pillGroup {
+@media (min-width: 900px) {
+  .controlsBar {
+    flex-wrap: nowrap;
+  }
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   Continuous Capsule Pill Rail with Dynamic Width & Drag Arrows
+   ========================================================================== */
+.capsuleRailContainer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 3px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden; /* Guarantees 100% unbroken continuous capsule curves */
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 1;
+  transition: width 0.2s ease;
+}
+
+.granularityPillGroup {
   display: inline-flex;
   align-items: center;
   background: var(--color-surface);
@@ -91,6 +124,102 @@
   padding: 3px;
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pillGroup {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0 4px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  cursor: grab;
+  scroll-behavior: smooth;
+  transition: mask-image 0.15s ease, -webkit-mask-image 0.15s ease;
+}
+
+.pillGroup:active {
+  cursor: grabbing;
+}
+
+.pillGroup::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+}
+
+/* Edge Gradient Mask States (Wide early fade, 0% opacity under arrow) */
+.maskBoth {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 38px, rgba(0,0,0,0.35) 55px, black 85px, black calc(100% - 85px), rgba(0,0,0,0.35) calc(100% - 55px), transparent calc(100% - 38px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 38px, rgba(0,0,0,0.35) 55px, black 85px, black calc(100% - 85px), rgba(0,0,0,0.35) calc(100% - 55px), transparent calc(100% - 38px), transparent 100%);
+}
+
+.maskRightOnly {
+  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 85px), rgba(0,0,0,0.35) calc(100% - 55px), transparent calc(100% - 38px), transparent 100%);
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 85px), rgba(0,0,0,0.35) calc(100% - 55px), transparent calc(100% - 38px), transparent 100%);
+}
+
+.maskLeftOnly {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 38px, rgba(0,0,0,0.35) 55px, black 85px, black 100%);
+  mask-image: linear-gradient(to right, transparent 0%, transparent 38px, rgba(0,0,0,0.35) 55px, black 85px, black 100%);
+}
+
+.maskNone {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Minimal Floating Unencircled Arrows Inside Capsule Ends */
+.capsuleArrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  background: transparent;
+  border: none;
+  color: var(--accent, #22B8CF);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.capsuleArrowVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.capsuleArrowLeft {
+  left: 6px;
+}
+
+.capsuleArrowRight {
+  right: 6px;
+}
+
+.capsuleArrow:hover {
+  transform: scale(1.25);
+  color: #10B981;
+}
+
+.capsuleArrow:active {
+  transform: scale(0.95);
+}
+
+[data-theme='light'] .capsuleArrow {
+  color: #0E8397;
+}
+
+[data-theme='light'] .capsuleArrow:hover {
+  color: #22B8CF;
 }
 
 .pillBtn {
@@ -397,12 +526,22 @@
     gap: 0.65rem;
   }
 
+  .capsuleRailContainer {
+    width: 100%;
+    display: flex;
+  }
+
   .pillGroup {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     display: flex;
-    padding: 3px;
+    padding: 0 4px;
+    scrollbar-width: none !important;
+  }
+
+  .pillGroup::-webkit-scrollbar {
+    display: none !important;
   }
 
   .pillBtn {
@@ -431,12 +570,18 @@
   }
 
   .chartCard {
-    padding: 1rem 0.85rem 0.5rem;
+    padding: 1.15rem 0.65rem 0.85rem;
     border-radius: 14px;
+    overflow: hidden;
   }
 
   .chartTitle {
     font-size: 0.98rem;
+  }
+
+  .chartWrapper {
+    width: 100%;
+    margin-left: 0;
   }
 
   .customTooltip {
@@ -444,3 +589,141 @@
     min-width: 140px;
   }
 }
+
+
+/* Dashboard Staggered Entrance Animations */
+.card {
+  animation: dashCardEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.chartCard {
+  animation: dashChartEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dashCardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dashChartEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Sleek Skeleton & Shimmer Loading Scene
+   -------------------------------------------------------------------------- */
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: 100%;
+  animation: dashCardEnter 0.35s ease both;
+}
+
+.skeletonStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  width: fit-content;
+  margin: 0 auto 0.5rem auto;
+}
+
+.skeletonPulse {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-border);
+  border-radius: 8px;
+  opacity: 0.65;
+}
+
+.skeletonPulse::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.12) 20%,
+    rgba(255, 255, 255, 0.28) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeletonCard {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px dashed var(--color-border) !important;
+}
+
+.skeletonChartCard {
+  min-height: 360px;
+  border: 1px dashed var(--color-border) !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.skeletonChartBars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem;
+  height: 220px;
+  padding: 1.5rem 1rem 0;
+}
+
+.skeletonBarCol {
+  flex: 1;
+  border-radius: 6px 6px 0 0;
+  background: var(--color-border);
+  position: relative;
+  overflow: hidden;
+  opacity: 0.5;
+  animation: barBreathing 1.8s infinite ease-in-out;
+}
+
+@keyframes barBreathing {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scaleY(0.92);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scaleY(1);
+  }
+}
+

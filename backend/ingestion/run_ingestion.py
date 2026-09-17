@@ -51,6 +51,16 @@ def main():
     # 3. Load Data
     loader = DataLoader(engine, args.db_url)
     loader.load_data(parsed_data)
+
+    # 4. Invalidate Semantic Cache so queries reflect newly uploaded data
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("TRUNCATE TABLE semantic_cache"))
+            conn.commit()
+        print("[CACHE] Semantic cache flushed successfully.")
+    except Exception as e:
+        print(f"[CACHE] Semantic cache notice: {e}")
     
     print("--- Ingestion Pipeline Completed Successfully ---")
 

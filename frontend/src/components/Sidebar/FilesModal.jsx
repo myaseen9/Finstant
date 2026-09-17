@@ -1,12 +1,18 @@
 import { authenticatedFetch } from '../../api/auth';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './SearchModal.module.css'; // Reusing search modal styles for consistency
 
 export default function FilesModal({ isOpen, onClose, onSelectReport }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,7 +46,7 @@ export default function FilesModal({ isOpen, onClose, onSelectReport }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const getLogicalTitle = (content, fallbackTitle) => {
     // Extract the first markdown heading (e.g., "# Report Name" or "## Report Name")
@@ -57,7 +63,7 @@ export default function FilesModal({ isOpen, onClose, onSelectReport }) {
     return logicalTitle.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.searchHeader}>
@@ -112,6 +118,7 @@ export default function FilesModal({ isOpen, onClose, onSelectReport }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

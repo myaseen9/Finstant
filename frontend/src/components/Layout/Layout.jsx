@@ -1,4 +1,5 @@
 import { useState, useContext, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import Sidebar from '../Sidebar/Sidebar';
 import styles from './Layout.module.css';
 import { AppContext } from '@/pages/_app';
@@ -12,38 +13,10 @@ const MenuIcon = () => (
 );
 
 export default function Layout({ children }) {
+  const router = useRouter();
   const { chats, setChats, activeChatId, setActiveChatId } = useContext(AppContext);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
-  const idleTimerRef = useRef(null);
-
-  // Auto-dock timer (10 seconds of idle inactivity outside sidebar for quick testing)
-  const startIdleTimer = () => {
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => {
-      setIsDesktopCollapsed(true);
-    }, 10000);
-  };
-
-  const clearIdleTimer = () => {
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    startIdleTimer();
-    return () => clearIdleTimer();
-  }, []);
-
-  const handleSidebarMouseEnter = () => {
-    clearIdleTimer();
-  };
-
-  const handleSidebarMouseLeave = () => {
-    startIdleTimer();
-  };
 
   return (
     <div className={styles.container}>
@@ -51,7 +24,12 @@ export default function Layout({ children }) {
         <button className={styles.menuBtn} onClick={() => setIsSidebarOpen(true)}>
           <MenuIcon />
         </button>
-        <span className={styles.mobileTitle}>Finstant</span>
+        <div className={styles.mobileBrand}>
+          <div className={styles.mobileBrandBadge}>
+            <img src="/logo.svg" alt="FINSTΛNT Logo" className={styles.mobileBrandImg} />
+          </div>
+          <span className={styles.mobileTitle}>FINST<span className={styles.lambda}>Λ</span>NT</span>
+        </div>
       </div>
 
       {isSidebarOpen && (
@@ -60,8 +38,6 @@ export default function Layout({ children }) {
 
       <div 
         className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''} ${isDesktopCollapsed ? styles.collapsed : ''}`}
-        onMouseEnter={handleSidebarMouseEnter}
-        onMouseLeave={handleSidebarMouseLeave}
       >
         <Sidebar 
           chats={chats} 
@@ -69,7 +45,6 @@ export default function Layout({ children }) {
           activeChatId={activeChatId} 
           isCollapsed={isSidebarOpen ? false : isDesktopCollapsed}
           onToggleCollapse={() => {
-            clearIdleTimer();
             setIsDesktopCollapsed(prev => !prev);
           }}
           setActiveChatId={(id) => {
@@ -80,7 +55,9 @@ export default function Layout({ children }) {
       </div>
 
       <main className={`${styles.mainContent} ${isDesktopCollapsed ? styles.contentCollapsed : ''}`}>
-        {children}
+        <div key={router.pathname} className={styles.pageTransitionWrapper}>
+          {children}
+        </div>
       </main>
     </div>
   );

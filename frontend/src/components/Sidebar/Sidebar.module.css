@@ -31,53 +31,110 @@
   align-items: center;
 }
 
-/* --------------------------------------------------------------------------
-   Top Horizontal Brand Row
-   -------------------------------------------------------------------------- */
+/* Brand Row Header — Dedicated Sleek Header Portion */
 .brandRow {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   position: relative;
-  padding: 1.15rem 0.4rem 1.05rem;
+  padding: 0.85rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.85rem;
   flex-shrink: 0;
-}
-
-.brandLogoTitle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  cursor: pointer;
-  user-select: none;
   width: 100%;
 }
 
-.brandLogo {
-  width: 86px;
-  height: 86px;
-  object-fit: contain;
-  flex-shrink: 0;
-  display: block;
-  margin-right: -6px;
+.brandLogoTitle {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  user-select: none;
+  flex-wrap: nowrap !important;
 }
 
-[data-theme='dark'] .brandLogo,
-[data-theme='dark'] .miniLogo {
+.sidebarToggleBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.sidebarToggleBtn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .sidebarToggleBtn {
+    display: none !important;
+  }
+}
+
+.brandExecBadge {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #22B8CF);
+  background: color-mix(in srgb, var(--accent, #22B8CF) 10%, var(--color-surface, #FFFFFF));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, #22B8CF) 20%, transparent);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.brandLogoTitle:hover .brandExecBadge {
+  transform: scale(1.06) rotate(-3deg);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent, #22B8CF) 35%, transparent);
+}
+
+.brandExecImg {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+:global([data-theme="dark"]) .brandExecImg,
+:global([data-theme="dark"]) .miniLogo,
+:global([data-theme="dark"]) .brandExecImgMini {
   filter: brightness(0) invert(1);
 }
 
 .brandTitle {
+  font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
   font-weight: 800;
-  font-size: 1.65rem;
-  color: var(--color-text);
-  letter-spacing: 0.5px;
+  font-size: 1.28rem;
+  color: var(--color-text, #0F172A);
+  letter-spacing: -0.02em;
   line-height: 1;
-  display: flex;
-  align-items: center;
-  transform: translateY(9px);
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+.lambda {
+  color: var(--accent, #22B8CF);
+  font-weight: 800;
+  margin: 0 1px;
 }
 
 .edgeDockBtn {
@@ -111,30 +168,27 @@
    Mini Collapsed Rail Elements
    -------------------------------------------------------------------------- */
 .miniLogoBtn {
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   margin-bottom: 0.5rem;
   padding: 0;
   flex-shrink: 0;
 }
 
 .miniLogoBtn:hover {
-  background: var(--color-hover);
-  transform: scale(1.08);
+  transform: scale(1.08) rotate(-3deg);
 }
 
-.miniLogo {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
+.miniLogoBtn:hover .brandExecBadgeMini {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent, #22B8CF) 35%, transparent);
 }
 
 .railDivider {
@@ -250,7 +304,7 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), font-weight 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
   box-shadow: var(--elev-1);
   margin-bottom: 0.2rem;
   flex-shrink: 0;
@@ -258,8 +312,13 @@
 
 .newChatBtn:hover {
   background-color: var(--btn-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--elev-2);
+  transform: translateY(-1.5px);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(34, 184, 207, 0.35);
+}
+
+.newChatBtn:active {
+  transform: translateY(0px) scale(0.99);
 }
 
 .navItemBtn {
@@ -275,13 +334,20 @@
   color: var(--color-text-secondary);
   font-size: 0.88rem;
   font-weight: 500;
-  transition: all 0.15s;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), font-weight 0.18s ease, color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
   text-align: left;
 }
 
 .navItemBtn:hover {
   background: var(--color-hover);
   color: var(--color-text);
+  transform: translateY(-1.5px);
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.navItemBtn:active {
+  transform: translateY(0px) scale(0.99);
 }
 
 .navItemBtn.navItemActive {
@@ -311,20 +377,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1rem;
-  border-radius: 999px;
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   cursor: pointer;
   color: var(--color-text-secondary);
   font-size: 0.88rem;
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), font-weight 0.18s ease, color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .recentsAccordionHeader:hover {
   background: var(--color-hover);
   color: var(--color-text);
+  transform: translateY(-1.5px);
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.recentsAccordionHeader:active {
+  transform: translateY(0px) scale(0.99);
 }
 
 /* Capsule Pill Header when Open */
@@ -342,10 +415,37 @@
   border-color: #1E2228;
 }
 
+[data-theme='light'] .recentsAccordionHeader.activeHeader .iconBtn {
+  color: #FFFFFF !important;
+  opacity: 0.9;
+}
+
+[data-theme='light'] .recentsAccordionHeader.activeHeader .iconBtn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
+  opacity: 1;
+}
+
+[data-theme='light'] .recentsAccordionHeader.activeHeader .recentsCollapseIndicator {
+  color: #FFFFFF !important;
+  opacity: 0.9;
+}
+
 .recentsHeaderActions {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+.recentsHeaderActions .iconBtn {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.recentsHeaderActions .iconBtn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
 }
 
 .recentsCollapseIndicator {
@@ -375,8 +475,8 @@
 }
 
 .iconBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #FFFFFF;
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 
 /* --------------------------------------------------------------------------
@@ -409,11 +509,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.55rem 0.85rem;
-  border-radius: 999px;
+  border-radius: 12px;
   cursor: pointer;
   color: var(--color-text-secondary);
   font-size: 0.85rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), font-weight 0.18s ease, color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
   position: relative;
   background: transparent;
 }
@@ -421,27 +521,86 @@
 .chatItem:hover {
   background: var(--color-hover);
   color: var(--color-text);
+  transform: translateY(-1.5px);
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* Active Chat Item: Pure Solid Capsule Pill (Matching Enlarz System in Reference) */
+.chatItem:active {
+  transform: translateY(0px) scale(0.99);
+}
+
+/* Active Chat Item: Sleek Consistent Rounded Rectangle */
 .chatItem.active {
   background: #FFFFFF !important;
   color: #121212 !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
   font-weight: 600;
+  border-radius: 12px !important;
 }
 
-.chatItem.active .itemFolderIcon {
-  color: #121212 !important;
+/* Chat Item Icon Buttons (3-dots, Pin) */
+.chatItem .iconBtn {
+  color: var(--color-text-muted);
+  transition: all 0.15s ease;
 }
 
-.chatItem.active .iconBtn {
-  color: #666666 !important;
+.chatItem:hover .iconBtn {
+  color: var(--color-text);
 }
 
-.chatItem.active .iconBtn:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #121212 !important;
+.chatItem .iconBtn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+[data-theme='light'] .chatItem .iconBtn {
+  color: #6B7280;
+}
+
+[data-theme='light'] .chatItem:hover .iconBtn {
+  color: #1F2937;
+}
+
+[data-theme='light'] .chatItem .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: #111827 !important;
+}
+
+[data-theme='light'] .chatItem.active .iconBtn {
+  color: #374151 !important;
+}
+
+[data-theme='light'] .chatItem.active .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #111827 !important;
+}
+
+[data-theme='dark'] .chatItem .iconBtn {
+  color: #9CA3AF;
+}
+
+[data-theme='dark'] .chatItem:hover .iconBtn {
+  color: #E5E7EB;
+}
+
+[data-theme='dark'] .chatItem .iconBtn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme='dark'] .chatItem.active .iconBtn {
+  color: #374151 !important;
+}
+
+[data-theme='dark'] .chatItem.active .iconBtn:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #111827 !important;
+}
+
+.chatItem.menuOpen {
+  z-index: 100 !important;
+  position: relative !important;
 }
 
 .chatTitleContainer {
@@ -476,7 +635,16 @@
 }
 
 .pinBtn {
-  color: var(--color-primary);
+  color: var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+
+.pinBtn.pinned {
+  color: var(--accent, #22B8CF) !important;
+}
+
+.pinBtn:hover {
+  color: var(--accent, #22B8CF);
 }
 
 /* --------------------------------------------------------------------------
@@ -512,7 +680,7 @@
     border-left: none;
     width: 100% !important;
     max-width: 100%;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+    box-shadow: none !important;
   }
 
   .expanded {
@@ -521,21 +689,63 @@
   }
 
   .brandRow {
-    min-height: 80px;
-    padding: 1.15rem 0.75rem;
-    margin-bottom: 0.65rem;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 0.85rem 0.65rem !important;
+    margin-bottom: 0.85rem !important;
+    border-bottom: 1px solid var(--color-border) !important;
   }
 
-  .brandLogo {
-    width: 42px;
-    height: 42px;
+  .brandLogoTitle {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .brandExecBadge {
+    width: 36px !important;
+    height: 36px !important;
+    flex-shrink: 0 !important;
+    margin-right: 0 !important;
   }
 
   .brandTitle {
-    font-size: 1.25rem;
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
   }
 
   .expandedScrollBody {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+.brandExecBadgeMini {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #22B8CF);
+  background: color-mix(in srgb, var(--accent, #22B8CF) 10%, var(--color-surface, #FFFFFF));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, #22B8CF) 20%, transparent);
+  transition: transform 0.25s ease;
+}
+
+.miniLogoWrap:hover .brandExecBadgeMini {
+  transform: scale(1.08);
+}
+
+.brandExecImgMini {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+

@@ -1,7 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './SearchModal.module.css'; // Reusing search modal styles for consistency
 
 export default function ArchiveModal({ isOpen, onClose, archivedChats, onUnarchive }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -15,9 +22,9 @@ export default function ArchiveModal({ isOpen, onClose, archivedChats, onUnarchi
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.searchHeader}>
@@ -69,6 +76,7 @@ export default function ArchiveModal({ isOpen, onClose, archivedChats, onUnarchi
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

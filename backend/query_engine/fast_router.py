@@ -446,7 +446,7 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                     return {
                         "matched": True,
                         "sql": sql,
-                        "answer": f"Revenue for {found_month} ({clean_fy}) was PKR {val:,.2f}.\n\nSource: {sheet} sheet, {found_month} row, Revenue column — {sf}."
+                        "answer": f"Revenue for {found_month} ({clean_fy}) was **PKR {val:,.2f}**.\n\nSource: {sheet} ({clean_fy})"
                     }
 
         # Pattern 2a: Single Month Gross Profit Margin % / GP Margin
@@ -474,7 +474,7 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                         return {
                             "matched": True,
                             "sql": sql,
-                            "answer": f"Gross Profit Margin for {found_month} ({clean_fy}) was {formatted_val}.\n\nSource: {sheet} sheet, {found_month} row, GP Margin column — {sf}."
+                            "answer": f"Gross Profit Margin for {found_month} ({clean_fy}) was **{formatted_val}**.\n\nSource: {sheet} ({clean_fy})"
                         }
             except Exception:
                 pass
@@ -498,7 +498,7 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                     return {
                         "matched": True,
                         "sql": sql,
-                        "answer": f"Gross Profit for {found_month} ({clean_fy}) was PKR {val:,.2f}.\n\nSource: {sheet} sheet, {found_month} row, Gross Profit column — {sf}."
+                        "answer": f"Gross Profit for {found_month} ({clean_fy}) was **PKR {val:,.2f}**.\n\nSource: {sheet} ({clean_fy})"
                     }
 
         # Pattern 3: Total / Annual Revenue from P&L
@@ -519,7 +519,7 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                     return {
                         "matched": True,
                         "sql": sql,
-                        "answer": f"Total {metric} for {clean_fy} was PKR {val:,.2f}.\n\nSource: {sheet} sheet, {metric} row, Annual Total column — {sf}."
+                        "answer": f"Total {metric} for {clean_fy} was **PKR {val:,.2f}**.\n\nSource: {sheet} ({clean_fy})"
                     }
 
         # Pattern 4: Min / Max Monthly Metrics (e.g. Highest / Lowest Month)
@@ -541,7 +541,7 @@ def direct_financial_fast_route(question: str, kb_engine, allowed_tables: set = 
                     return {
                         "matched": True,
                         "sql": sql,
-                        "answer": f"The {desc} {col_name.lower()} month in {clean_fy} was {m_found} with PKR {val:,.2f}.\n\nSource: {sheet} sheet, {m_found} row, {col_name} column — {sf}."
+                        "answer": f"The {desc} {col_name.lower()} month in {clean_fy} was **{m_found}** with **PKR {val:,.2f}**.\n\nSource: {sheet} ({clean_fy})"
                     }
     except Exception as e:
         print(f"Fast Router Warning: {e}")

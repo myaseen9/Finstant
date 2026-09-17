@@ -4,11 +4,13 @@ from typing import Optional
 import uuid
 import json
 import traceback
+import re
 from sqlalchemy import text
 from query_engine.executor import get_app_engine, log_audit
 from query_engine.functions import get_kb_engine
 from query_engine.translator import run_query_loop
 from query_engine.fast_router import prune_schema, check_semantic_cache, save_to_semantic_cache, direct_financial_fast_route, get_grounded_entities
+from query_engine.title_generator import generate_semantic_chat_title, generate_chat_title
 from response.formatter import format_response
 from api.dependencies import get_current_user
 
@@ -23,6 +25,21 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     session_id: str
+    chat_title: Optional[str] = None
+
+
+def matches_dataset(a: str, b: str) -> bool:
+    if not a or not b:
+        return False
+    na = re.sub(r'[^a-z0-9]', '', str(a).lower())
+    nb = re.sub(r'[^a-z0-9]', '', str(b).lower())
+    if na == nb:
+        return True
+    na_clean = na.replace('and', '')
+    nb_clean = nb.replace('and', '')
+    if na_clean == nb_clean:
+        return True
+    return False
 
 
 def extract_context_anchor_from_history(chat_history: list, current_message: str) -> tuple:
@@ -136,44 +153,19 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
     engine = get_app_engine()
     kb_engine = get_kb_engine()
     user_id = current_user["id"]
-
     clean_msg = request.message.strip().lower()
-
-    # LAYER 0: Identity / Self-description Pre-Filter (Runs before role/RBAC check)
-    if is_identity_query(clean_msg):
-        return ChatResponse(
-            answer=GENERIC_IDENTITY_RESPONSE,
-            session_id=request.session_id or str(uuid.uuid4())
-        )
-
-    # LAYER 0: Universal Out-of-Scope Scope Gate (Applies identically to ALL roles: user, admin, superadmin)
-    if is_out_of_scope_query(clean_msg):
-        return ChatResponse(
-            answer=UNIVERSAL_OUT_OF_SCOPE_REFUSAL,
-            session_id=request.session_id or str(uuid.uuid4())
-        )
-
-    with engine.connect() as conn:
-        try:
-            result = conn.execute(text("SELECT count(*) FROM file_upload WHERE status IN ('Completed', 'Ingesting')")).scalar()
-            if result == 0:
-                with kb_engine.connect() as kb_conn:
-                    kb_tables = kb_conn.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")).scalar()
-                if kb_tables == 0:
-                    return ChatResponse(answer="No financial data is currently uploaded in the Knowledge Base. Please upload your financial Excel file in the Data Management panel to begin.", session_id=request.session_id or "")
-        except Exception:
-            pass
-
     session_id = request.session_id
+    is_new_session = not session_id
+    session_title = None
 
     chat_history = []
     with engine.connect() as conn:
-        if not session_id:
+        if is_new_session:
             session_id = str(uuid.uuid4())
-            title = request.message[:30] + "..." if len(request.message) > 30 else request.message
+            session_title = generate_semantic_chat_title(request.message)
             conn.execute(
                 text("INSERT INTO chat_session (id, user_id, title) VALUES (:id, :user_id, :title)"),
-                {"id": session_id, "user_id": user_id, "title": title}
+                {"id": session_id, "user_id": user_id, "title": session_title}
             )
             conn.commit()
         else:
@@ -188,27 +180,105 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
             if len(chat_history) > 8:
                 chat_history = chat_history[-8:]
 
+    def _persist_and_respond(answer_text: str):
+        final_title = session_title
+        with engine.connect() as conn:
+            conn.execute(
+                text("INSERT INTO chat_message (id, session_id, role, content) VALUES (:id1, :sid, 'user', :content), (:id2, :sid, 'assistant', :answer)"),
+                {"id1": str(uuid.uuid4()), "id2": str(uuid.uuid4()), "sid": session_id, "content": request.message, "answer": answer_text}
+            )
+            if is_new_session:
+                try:
+                    refined = generate_chat_title(request.message, answer_text)
+                    if refined and refined != "Financial Query":
+                        conn.execute(
+                            text("UPDATE chat_session SET title = :title WHERE id = :sid"),
+                            {"title": refined, "sid": session_id}
+                        )
+                        final_title = refined
+                except Exception:
+                    pass
+            conn.commit()
+        return ChatResponse(answer=answer_text, session_id=session_id, chat_title=final_title)
+
+    # LAYER 0: Identity / Self-description Pre-Filter (Runs before role/RBAC check)
+    if is_identity_query(clean_msg):
+        return _persist_and_respond(GENERIC_IDENTITY_RESPONSE)
+
+    # LAYER 0: Universal Out-of-Scope Scope Gate (Applies identically to ALL roles: user, admin, superadmin)
+    if is_out_of_scope_query(clean_msg):
+        return _persist_and_respond(UNIVERSAL_OUT_OF_SCOPE_REFUSAL)
+
+    with engine.connect() as conn:
+        try:
+            result = conn.execute(text("SELECT count(*) FROM file_upload WHERE status IN ('Completed', 'Ingesting')")).scalar()
+            if result == 0:
+                with kb_engine.connect() as kb_conn:
+                    kb_tables = kb_conn.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")).scalar()
+                if kb_tables == 0:
+                    return _persist_and_respond("No financial data is currently uploaded in the Knowledge Base. Please upload your financial Excel file in the Data Management panel to begin.")
+        except Exception:
+            pass
+
     schema_context = {}
     allowed_tables = set()
     
     if current_user.get("role") in ["admin", "superadmin"]:
         pass
     else:
-        with engine.connect() as conn:
-            access_res = conn.execute(text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"), {"uid": user_id}).fetchall()
-            allowed_tables = {r[0] for r in access_res}
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS user_sheet_access (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER,
+                        sheet_name VARCHAR(255)
+                    );
+                    CREATE TABLE IF NOT EXISTS designation_sheet_access (
+                        id SERIAL PRIMARY KEY,
+                        designation VARCHAR(255),
+                        sheet_name VARCHAR(255)
+                    );
+                """))
+                conn.commit()
+
+                user_desig_row = conn.execute(text("SELECT designation FROM app_user WHERE id = :uid"), {"uid": user_id}).fetchone()
+                user_desig = (user_desig_row[0] if user_desig_row and user_desig_row[0] else "") or current_user.get("designation") or ""
+
+                user_access_rows = conn.execute(
+                    text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"),
+                    {"uid": user_id}
+                ).fetchall()
+
+                if user_access_rows:
+                    allowed_raw = [r[0] for r in user_access_rows if r[0] and r[0] != '__NONE__']
+                else:
+                    desig_access_rows = conn.execute(
+                        text("SELECT sheet_name FROM designation_sheet_access WHERE LOWER(designation) = LOWER(:desig)"),
+                        {"desig": user_desig}
+                    ).fetchall()
+                    allowed_raw = [r[0] for r in desig_access_rows if r[0] and r[0] != '__NONE__']
+
+                allowed_tables = set(allowed_raw)
+        except Exception as e:
+            print(f"[RBAC Check Warning]: {e}")
+            allowed_tables = set()
 
     with kb_engine.connect() as conn:
         tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
         for r in tables_res:
             tbl = r[0]
-            if current_user.get("role") not in ["admin", "superadmin"] and tbl not in allowed_tables:
+            if tbl == 'security_test' or tbl == 'spatial_ref_sys':
                 continue
-            if tbl == 'security_test':
-                continue
+            if current_user.get("role") not in ["admin", "superadmin"]:
+                if not any(matches_dataset(tbl, a) for a in allowed_tables):
+                    continue
 
             cols_res = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name=:tbl"), {"tbl": tbl}).fetchall()
             schema_context[tbl] = [c[0] for c in cols_res]
+
+    if current_user.get("role") not in ["admin", "superadmin"] and not schema_context:
+        return _persist_and_respond("You do not have access to this financial data. Please contact your Administrator to request access in the Access Control panel.")
 
     created_tables = []
     try:
@@ -226,11 +296,11 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
         # LAYER 0: Instant RBAC Authorization Guard (< 2ms)
         if current_user.get("role") not in ["admin", "superadmin"]:
             if grounded:
-                grounded_tables = {g['table'] for g in grounded if g.get('table')}
+                grounded_tables = {g['table'].lower().strip() for g in grounded if g.get('table')}
                 if grounded_tables and not any(t in allowed_tables for t in grounded_tables):
-                    print(f"[RBAC GUARD] Blocked unauthorized access attempt to {grounded_tables}")
+                    print(f"[RBAC GUARD] Blocked unauthorized access attempt to {grounded_tables}. Allowed tables: {allowed_tables}")
                     log_audit(user_id, "execute_read_only_sql (DENIED)", json.dumps({"query": request.message, "reason": "RBAC restriction"}))
-                    return ChatResponse(answer="You do not have access to this data.", session_id=session_id)
+                    return _persist_and_respond("You do not have access to this data.")
 
         # 1. Check Semantic Cache ($0.00 cost) — only for standalone queries
         cached_answer = None
@@ -265,6 +335,12 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
                     answer = loop_result.get("final_text")
                 else:
                     answer = format_response(loop_result)
+
+                    # Auto-tag reports with PDF download flag if user explicitly asked for a report/analysis
+                    is_report_req = any(w in clean_msg for w in ["report", "detailed analysis", "complete analysis", "descriptive analysis", "executive summary", "full analysis"])
+                    has_report_structure = ("|" in answer and ("#" in answer or "Summary" in answer or "Total" in answer))
+                    if (is_report_req or has_report_structure) and "<!-- SHOW_PDF_BUTTON -->" not in answer:
+                        answer += "\n\n<!-- SHOW_PDF_BUTTON -->"
                     
                     if loop_result.get("lineage") and not chat_history:
                         save_to_semantic_cache(request.message, answer, engine)
@@ -282,14 +358,62 @@ def chat_endpoint(request: ChatRequest, current_user: dict = Depends(get_current
                     except Exception as e:
                         print(f"Failed to drop temp table {temp_tbl}: {e}")
 
-    with engine.connect() as conn:
-        conn.execute(
-            text("INSERT INTO chat_message (id, session_id, role, content) VALUES (:id1, :sid, 'user', :content), (:id2, :sid, 'assistant', :answer)"),
-            {"id1": str(uuid.uuid4()), "id2": str(uuid.uuid4()), "sid": session_id, "content": request.message, "answer": answer}
-        )
-        conn.commit()
+    return _persist_and_respond(answer)
 
-    return ChatResponse(answer=answer, session_id=session_id)
+
+@router.get("/my-access")
+@router.get("/api/my-access")
+async def get_my_access(current_user: dict = Depends(get_current_user)):
+    """Returns the list of tables/sheets accessible by the currently logged-in user."""
+    engine = get_app_engine()
+    kb_engine = get_kb_engine()
+    user_id = current_user.get("id")
+    is_admin = current_user.get("role") in ["admin", "superadmin"]
+    
+    with kb_engine.connect() as kb_conn:
+        all_tables = [r[0] for r in kb_conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall() if r[0] not in ('security_test', 'spatial_ref_sys')]
+        
+    if is_admin:
+        return [{"id": t, "name": t.replace('_', ' ').title()} for t in all_tables]
+        
+    try:
+        with engine.connect() as conn:
+            user_desig_row = conn.execute(text("SELECT designation FROM app_user WHERE id = :uid"), {"uid": user_id}).fetchone()
+            user_desig = (user_desig_row[0] if user_desig_row and user_desig_row[0] else "") or current_user.get("designation") or ""
+            
+            # 1. User-specific grant takes priority
+            user_access_rows = conn.execute(
+                text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"),
+                {"uid": user_id}
+            ).fetchall()
+            
+            if user_access_rows:
+                raw_sheets = [r[0].strip() for r in user_access_rows if r[0] and r[0].strip() and r[0].strip() != '__NONE__']
+            else:
+                # 2. Designation default fallback
+                desig_access_rows = conn.execute(
+                    text("SELECT sheet_name FROM designation_sheet_access WHERE LOWER(designation) = LOWER(:desig)"),
+                    {"desig": user_desig}
+                ).fetchall()
+                raw_sheets = [r[0].strip() for r in desig_access_rows if r[0] and r[0].strip() and r[0].strip() != '__NONE__']
+            
+            if not raw_sheets:
+                return []
+            
+            results = []
+            seen_ids = set()
+            for s in raw_sheets:
+                matched_table = next((t for t in all_tables if matches_dataset(t, s)), None)
+                tbl_id = matched_table if matched_table else s
+                if tbl_id not in seen_ids:
+                    seen_ids.add(tbl_id)
+                    disp_name = (matched_table if matched_table else s).replace('_', ' ').title()
+                    results.append({"id": tbl_id, "name": disp_name})
+            
+            return results
+    except Exception as e:
+        print(f"Error fetching user access: {e}")
+        return []
 
 
 @router.get("/chats")

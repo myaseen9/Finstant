@@ -3,7 +3,7 @@ import { createContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getMe } from '@/api/auth';
 import { API_BASE } from '@/lib/api';
-import { useThemeMode } from '@/lib/theme';
+import { useThemeMode, useFontMode } from '@/lib/theme';
 import '@/styles/globals.css';
 
 import ActionHUD from '@/components/Common/ActionHUD';
@@ -19,7 +19,7 @@ function RouteGuard({ children, user, isLoaded }) {
 
     const path = router.pathname;
 
-    if (!user && path !== '/login') {
+    if (!user && path !== '/login' && path !== '/' && path !== '/landing') {
       setAuthorized(false);
       router.push('/login');
     } else if (user && path === '/login') {
@@ -49,6 +49,7 @@ export default function App({ Component, pageProps }) {
   };
 
   const { theme, themeMode, setThemeMode, toggleTheme } = useThemeMode();
+  const { font, setFont, fontOptions } = useFontMode();
 
   useEffect(() => {
     const checkSession = async () => {
@@ -100,6 +101,9 @@ export default function App({ Component, pageProps }) {
       themeMode,
       setThemeMode,
       toggleTheme,
+      font,
+      setFont,
+      fontOptions,
       user,
       setUser,
       chats,
@@ -108,7 +112,7 @@ export default function App({ Component, pageProps }) {
       setActiveChatId,
       showHUD,
     }),
-    [theme, themeMode, setThemeMode, toggleTheme, user, chats, activeChatId],
+    [theme, themeMode, setThemeMode, toggleTheme, font, setFont, fontOptions, user, chats, activeChatId],
   );
 
   return (

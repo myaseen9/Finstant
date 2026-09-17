@@ -10,10 +10,22 @@ import ChatActionMenu from './ChatActionMenu';
 import FilesModal from './FilesModal';
 import ReportViewerModal from './ReportViewerModal';
 
-const PinIcon = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <line x1="12" y1="17" x2="12" y2="22"></line>
-    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+const PinIcon = ({ className, isPinned = false }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="14" 
+    height="14" 
+    viewBox="0 0 24 24" 
+    fill={isPinned ? "currentColor" : "none"} 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <ellipse cx="12" cy="4" rx="5" ry="1.5" />
+    <path d="M9 4.5v5.5c0 .6-.3 1.2-.8 1.6C7.2 12.4 6 13.6 6 15c0 .6.4 1 1 1h10c.6 0 1-.4 1-1 0-1.4-1.2-2.6-2.2-3.4-.5-.4-.8-1-.8-1.6V4.5" />
+    <line x1="12" y1="16" x2="12" y2="22" strokeWidth="2.2" />
   </svg>
 );
 
@@ -151,8 +163,10 @@ export default function Sidebar({
   if (isCollapsed) {
     return (
       <aside className={`${styles.sidebarContainer} ${styles.collapsed}`}>
-        <button className={styles.miniLogoBtn} onClick={onToggleCollapse} title="Click to expand sidebar">
-          <img src="/logo.svg" alt="Logo" className={styles.miniLogo} />
+        <button className={styles.miniLogoBtn} onClick={onToggleCollapse} title="Click to expand sidebar" aria-label="Expand sidebar">
+          <div className={styles.brandExecBadgeMini}>
+            <img src="/logo.svg" alt="FINSTΛNT Owl Logo" className={styles.brandExecImgMini} />
+          </div>
         </button>
 
         <div className={styles.railDivider} />
@@ -241,12 +255,27 @@ export default function Sidebar({
   // -------------------------------------------------------------------------
   return (
     <aside className={`${styles.sidebarContainer} ${styles.expanded}`}>
-      {/* 1. Sab sy oper: LOGO And Name Horizontally (Click to toggle collapse) */}
+      {/* 1. Sab sy oper: LOGO And Name Horizontally + Minimal Sidebar Toggle Icon */}
       <div className={styles.brandRow}>
-        <div className={styles.brandLogoTitle} onClick={onToggleCollapse} title="Click to collapse sidebar">
-          <img src="/logo.svg" alt="Finstant Logo" className={styles.brandLogo} />
-          <span className={styles.brandTitle}>FINSTΛNT</span>
+        <div className={styles.brandLogoTitle}>
+          <div className={styles.brandExecBadge}>
+            <img src="/logo.svg" alt="FINSTΛNT Owl Logo" className={styles.brandExecImg} />
+          </div>
+          <span className={styles.brandTitle}>FINST<span className={styles.lambda}>Λ</span>NT</span>
         </div>
+
+        <button 
+          type="button" 
+          className={styles.sidebarToggleBtn} 
+          onClick={onToggleCollapse} 
+          title="Collapse sidebar"
+          aria-label="Collapse sidebar"
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
       </div>
 
       <div className={styles.expandedScrollBody}>
@@ -262,9 +291,6 @@ export default function Sidebar({
             className={`${styles.recentsAccordionHeader} ${isFilesDropdownOpen ? styles.activeHeader : ''}`}
             onClick={() => {
               setIsFilesDropdownOpen(!isFilesDropdownOpen);
-              if (router.pathname !== '/') {
-                router.push('/');
-              }
             }}
           >
             <div className={styles.navItemLeft}>
@@ -333,12 +359,9 @@ export default function Sidebar({
         {/* 4. Recents (Collapsible Dropdown — Matching Reference Image) */}
         <div className={styles.recentsDropdownSection}>
           <div 
-            className={`${styles.recentsAccordionHeader} ${isRecentsOpen || router.pathname === '/' ? styles.activeHeader : ''}`}
+            className={`${styles.recentsAccordionHeader} ${isRecentsOpen ? styles.activeHeader : ''}`}
             onClick={() => {
               setIsRecentsOpen(!isRecentsOpen);
-              if (router.pathname !== '/') {
-                router.push('/');
-              }
             }}
           >
             <div className={styles.navItemLeft}>
@@ -386,20 +409,13 @@ export default function Sidebar({
               {activeChats.map(chat => (
                 <div 
                   key={chat.id} 
-                  className={`${styles.chatItem} ${activeChatId === chat.id && router.pathname === '/' ? styles.active : ''}`}
+                  className={`${styles.chatItem} ${activeChatId === chat.id && router.pathname === '/' ? styles.active : ''} ${openMenuId === chat.id ? styles.menuOpen : ''}`}
                   onClick={() => {
                     setActiveChatId(chat.id);
                     if (router.pathname !== '/') router.push('/');
                   }}
                 >
                   <div className={styles.chatTitleContainer}>
-                    {/* Folder Icon from reference image */}
-                    <div className={styles.itemFolderIcon}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
-                      </svg>
-                    </div>
-
                     {editingChatId === chat.id ? (
                       <input 
                         type="text" 
@@ -433,14 +449,14 @@ export default function Sidebar({
 
                   <div className={`${styles.actions} ${chat.pinned ? styles.pinnedActions : ''}`}>
                     {(chat.pinned || activeChatId === chat.id || openMenuId === chat.id) && (
-                      <button className={styles.iconBtn} onClick={(e) => handlePin(chat.id, e)} title="Pin chat">
-                        <PinIcon className={`${styles.pinBtn} ${chat.pinned ? styles.pinned : ''}`} />
+                      <button className={styles.iconBtn} onClick={(e) => handlePin(chat.id, e)} title={chat.pinned ? "Unpin chat" : "Pin chat"}>
+                        <PinIcon className={`${styles.pinBtn} ${chat.pinned ? styles.pinned : ''}`} isPinned={chat.pinned} />
                       </button>
                     )}
                     
-                    <div style={{ position: 'relative' }}>
+                    <div>
                       <button 
-                        ref={el => menuBtnRefs.current[chat.id] = el}
+                        ref={el => { menuBtnRefs.current[chat.id] = el; }}
                         className={styles.iconBtn} 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -450,16 +466,6 @@ export default function Sidebar({
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                       </button>
-                      <ChatActionMenu 
-                        isOpen={openMenuId === chat.id} 
-                        onClose={() => setOpenMenuId(null)}
-                        onPin={(e) => { handlePin(chat.id, e); setOpenMenuId(null); }}
-                        onRename={(e) => { handleRenameStart(chat, e); setOpenMenuId(null); }}
-                        onArchive={(e) => { handleArchive(chat.id, e); setOpenMenuId(null); }}
-                        onDelete={(e) => { handleDelete(chat.id, e); setOpenMenuId(null); }}
-                        isPinned={chat.pinned}
-                        buttonRef={{ current: menuBtnRefs.current[chat.id] }}
-                      />
                     </div>
                   </div>
                 </div>
@@ -527,6 +533,23 @@ export default function Sidebar({
       <ArchiveModal isOpen={isArchiveOpen} onClose={() => setIsArchiveOpen(false)} archivedChats={archivedChats} onUnarchive={handleUnarchive} />
       <FilesModal isOpen={isFilesOpen} onClose={() => setIsFilesOpen(false)} onSelectReport={(r) => setSelectedReport(r)} />
       <ReportViewerModal isOpen={!!selectedReport} onClose={() => setSelectedReport(null)} report={selectedReport} />
+
+      {/* 3-Dot More Options Dropdown rendered OUTSIDE the scroller container */}
+      {openMenuId && chats.find(c => c.id === openMenuId) && (() => {
+        const activeMenuChat = chats.find(c => c.id === openMenuId);
+        return (
+          <ChatActionMenu 
+            isOpen={true} 
+            onClose={() => setOpenMenuId(null)}
+            onPin={(e) => { handlePin(activeMenuChat.id, e); setOpenMenuId(null); }}
+            onRename={(e) => { handleRenameStart(activeMenuChat, e); setOpenMenuId(null); }}
+            onArchive={(e) => { handleArchive(activeMenuChat.id, e); setOpenMenuId(null); }}
+            onDelete={(e) => { handleDelete(activeMenuChat.id, e); setOpenMenuId(null); }}
+            isPinned={activeMenuChat.pinned}
+            buttonRef={{ current: menuBtnRefs.current[activeMenuChat.id] }}
+          />
+        );
+      })()}
     </aside>
   );
 }

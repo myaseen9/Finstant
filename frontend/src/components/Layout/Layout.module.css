@@ -29,10 +29,13 @@
 }
 
 .mobileTitle {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--color-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 800;
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+  color: var(--color-text, #0F172A);
+  display: flex;
+  align-items: center;
 }
 
 .sidebarWrapper {
@@ -62,6 +65,27 @@
   transition: padding-left 0.3s ease;
 }
 
+.pageTransitionWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  animation: pageEnter 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.996);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .contentCollapsed {
   padding-left: 0;
 }
@@ -84,9 +108,16 @@
 
   .mobileHeader {
     display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 56px;
     padding: 0 1rem;
     z-index: 90;
+    background-color: var(--color-surface, #FFFFFF);
+    border-bottom: 1px solid var(--color-border, #E2E8F0);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -111,11 +142,15 @@
     height: 100dvh;
     transform: translateX(-100%);
     z-index: 100;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25);
+    box-shadow: none !important;
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
   }
 
   .sidebarWrapper.open {
     transform: translateX(0);
+    visibility: visible;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
   }
 
   .sidebarWrapper.collapsed {
@@ -126,4 +161,37 @@
     display: block;
     z-index: 95;
   }
+}
+
+
+.mobileBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileBrandBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #22B8CF);
+  background: color-mix(in srgb, var(--accent, #22B8CF) 10%, var(--surface, #FFFFFF));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobileBrandImg {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+:global([data-theme="dark"]) .mobileBrandImg {
+  filter: brightness(0) invert(1);
+}
+
+.lambda {
+  color: var(--accent, #22B8CF);
+  margin: 0 1px;
 }

@@ -9,7 +9,7 @@ GENERIC_IDENTITY_RESPONSE = (
 FORBIDDEN_DISCLOSURE_TERMS = [
     "postgresql", "postgres", "finstant_kb", "finstant_users", "database",
     "sql", "bedrock", "anthropic", "claude", "cognito", "aws", "api key",
-    "table", "schema", "backend", "server", "localhost", "ec2"
+    "schema", "backend", "server", "localhost", "ec2"
 ]
 
 def contains_disclosure_risk(response_text: str) -> bool:

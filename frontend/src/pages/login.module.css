@@ -3,8 +3,37 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--color-background);
   font-family: var(--font-sans);
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes loginCardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes entranceShared {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card {
@@ -15,6 +44,7 @@
   max-width: 400px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--color-border);
+  animation: loginCardEntrance 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .brandBanner {
@@ -24,45 +54,70 @@
   justify-content: center;
   margin-bottom: 0.5rem;
   gap: 0;
+  animation: entranceShared 420ms cubic-bezier(0.16, 1, 0.3, 1) 0ms both;
 }
 
 .bannerLogoWrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 96px;
-  height: 96px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #22B8CF);
+  background: color-mix(in srgb, var(--accent, #22B8CF) 10%, var(--surface, #FFFFFF));
+  margin: 0 auto 0.75rem auto;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent, #22B8CF) 25%, transparent);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bannerLogo {
-  width: 100%;
-  height: 100%;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
-/* Automatically invert the logo to white in dark mode */
 [data-theme='dark'] .bannerLogo {
-  filter: brightness(0) invert(1);
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .bannerText {
-  font-weight: 900;
-  font-size: 1.5rem; /* Slightly larger than sidebar for the main login page */
-  color: var(--color-text);
-  letter-spacing: -0.01em;
-  margin-top: -0.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: var(--color-text, #0F172A);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lambda {
+  color: var(--accent, #22B8CF);
+  margin: 0 1px;
 }
 
 .subtitle {
   color: var(--color-text-muted);
   text-align: center;
   margin-bottom: 2rem;
+  animation: entranceShared 420ms cubic-bezier(0.16, 1, 0.3, 1) 40ms both;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.form .inputGroup:nth-child(1) {
+  animation: entranceShared 420ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.form .inputGroup:nth-child(2) {
+  animation: entranceShared 420ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
 }
 
 .inputGroup {
@@ -80,6 +135,7 @@
   margin-bottom: 1rem;
   border: 1px solid rgba(255, 77, 79, 0.2);
   text-align: center;
+  animation: entranceShared 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .inputGroup label {
@@ -89,6 +145,8 @@
 }
 
 .inputGroup input {
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--color-border);
@@ -116,6 +174,7 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: entranceShared 420ms cubic-bezier(0.16, 1, 0.3, 1) 160ms both;
 }
 
 .submitBtn:hover {
@@ -133,6 +192,451 @@
   color: var(--color-text-muted);
 }
 
+/* --- Forgot Password Prompt (Conditional) --- */
+.forgotPrompt {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  text-align: center;
+  animation: entranceShared 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.forgotText {
+  font-size: 0.88rem;
+  color: var(--color-text-muted, #8B8880);
+  margin: 0;
+}
+
+.resetLinkBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--color-text-muted, #8B8880);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.18s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.resetLinkBtn:hover {
+  color: var(--accent, #22B8CF);
+}
+
+/* --- Reset Password Mode & Step Indicator --- */
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  animation: entranceShared 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stepPill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-muted, #8B8880);
+  transition: all 0.2s ease;
+}
+
+.stepPill.stepActive {
+  color: var(--color-text, #1A1A1A);
+  font-weight: 600;
+}
+
+.stepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--track, #E8E5DD);
+  color: var(--color-text-muted, #8B8880);
+  transition: all 0.2s ease;
+}
+
+.stepPill.stepActive .stepNumber {
+  background: var(--accent, #22B8CF);
+  color: #FFFFFF;
+}
+
+.stepDivider {
+  width: 28px;
+  height: 2px;
+  background: var(--border, #E3E0D8);
+  border-radius: 1px;
+  transition: background 0.2s ease;
+}
+
+.stepDivider.stepDividerActive {
+  background: var(--accent, #22B8CF);
+}
+
+.helperText {
+  color: var(--color-text-muted, #8B8880);
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.codeInput,
+.passwordInput {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: 42px !important;
+  padding: 0.45rem 0.75rem !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--color-border) !important;
+  background-color: var(--color-input-bg) !important;
+  color: var(--color-input-text) !important;
+  outline: none !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 1.12rem !important;
+  letter-spacing: 0.22em !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s !important;
+}
+
+.codeInput:focus,
+.passwordInput:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(34, 184, 207, 0.2) !important;
+}
+
+.codeVerifiedLocked {
+  opacity: 0.6 !important;
+  color: var(--color-text-muted, #8B8880) !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(34, 184, 207, 0.35) !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  user-select: none !important;
+}
+
+[data-theme='dark'] .codeVerifiedLocked {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border-color: rgba(34, 184, 207, 0.35) !important;
+}
+
+.resetActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.rowBtn {
+  flex: 1;
+  min-width: 0;
+  padding: 0.8rem 0.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: none;
+  background-color: var(--action);
+  color: var(--action-text);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.rowBtn:hover {
+  background-color: var(--action-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.22);
+}
+
+.rowBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.inputEndAction {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+  min-height: 24px;
+}
+
+.codeStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.verifyingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text-muted, #8B8880);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.windowsSpinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(139, 136, 128, 0.25);
+  border-top-color: var(--accent, #22B8CF);
+  border-radius: 50%;
+  animation: windowsSpin 0.75s linear infinite;
+  display: inline-block;
+}
+
+@keyframes windowsSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent, #22B8CF);
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: tickFadeIn 0.25s ease forwards;
+}
+
+.minimalTick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(34, 184, 207, 0.15);
+  color: var(--accent, #22B8CF);
+  font-size: 0.72rem;
+  font-weight: bold;
+}
+
+@keyframes tickFadeIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.resendTextBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #8B8880);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.resendTextBtn:hover {
+  color: var(--accent, #22B8CF);
+  background: var(--color-hover, rgba(0, 0, 0, 0.04));
+}
+
+.resendTextBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.passwordFieldWrapper {
+  position: relative;
+  width: 100%;
+  display: block;
+}
+
+.inputDisabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  background-color: var(--color-background, #F3F1EC) !important;
+  border-color: var(--color-border, #E3E0D8) !important;
+}
+
+.passwordConditionsDropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E3E0D8);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  z-index: 100;
+  animation: dropdownPopUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: none;
+}
+
+[data-theme='dark'] .passwordConditionsDropdown {
+  background: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.dropdownTitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #8B8880);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.dropdownArrow {
+  position: absolute;
+  top: 100%;
+  left: 24px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--border, #E3E0D8);
+}
+
+[data-theme='dark'] .dropdownArrow {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+@keyframes dropdownPopUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.successBannerCompact {
+  background: rgba(34, 184, 207, 0.08);
+  border: 1px solid rgba(34, 184, 207, 0.3);
+  color: var(--accent, #22B8CF);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  text-align: center;
+  line-height: 1.35;
+  margin-bottom: 0.35rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.secondaryBtn {
+  background: transparent;
+  color: var(--color-text-muted, #8B8880);
+  border: 1px solid var(--color-border, #E3E0D8);
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.18s ease;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-hover, rgba(0, 0, 0, 0.04));
+  color: var(--color-text, #1A1A1A);
+  border-color: var(--color-text-muted, #8B8880);
+}
+
+.buttonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.ghostBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #8B8880);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.18s ease;
+}
+
+.ghostBtn:hover {
+  color: var(--accent, #22B8CF);
+  background: var(--color-hover, rgba(0, 0, 0, 0.04));
+}
+
+.successBanner {
+  background: rgba(34, 184, 207, 0.1);
+  border: 1px solid rgba(34, 184, 207, 0.35);
+  color: var(--accent, #22B8CF);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  animation: entranceShared 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.passwordChecklist {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--color-background, #F3F1EC);
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #E3E0D8);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+}
+
+.checklistItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.15s ease;
+}
+
 .loadingContainer {
   display: flex;
   flex-direction: column;
@@ -146,18 +650,11 @@
 .pulsingLogo {
   width: 80px;
   height: 80px;
-  animation: pulse 2s infinite ease-in-out;
   object-fit: contain;
 }
 
 [data-theme='dark'] .pulsingLogo {
   filter: brightness(0) invert(1);
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.9); opacity: 0.6; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.6; }
 }
 
 .loadingText {
@@ -171,26 +668,83 @@
 @media (max-width: 480px) {
   .container {
     height: 100dvh;
-    padding: 1rem;
+    padding: 0.85rem;
+    align-items: center;
+    overscroll-behavior: none;
   }
   .card {
-    padding: 2rem 1.25rem;
+    padding: 1.5rem 1.15rem;
     width: 100%;
     max-width: 100%;
     border-radius: 14px;
+    margin: auto 0;
   }
   .bannerLogoWrapper {
-    width: 72px;
-    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent, #22B8CF);
+    background: color-mix(in srgb, var(--accent, #22B8CF) 10%, var(--surface, #FFFFFF));
+    margin: 0 auto 0.5rem auto;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--accent, #22B8CF) 25%, transparent);
   }
   .bannerText {
-    font-size: 1.3rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--color-text, #0F172A);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lambda {
+    color: var(--accent, #22B8CF);
+    margin: 0 1px;
   }
   .subtitle {
-    font-size: 0.85rem;
-    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
   }
   .form {
-    gap: 1.15rem;
+    gap: 1rem;
+  }
+  .stepTracker {
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+  .stepPill {
+    font-size: 0.76rem;
+    gap: 0.35rem;
+  }
+  .stepDivider {
+    width: 20px;
+  }
+  .rowBtn {
+    font-size: 0.78rem;
+    padding: 0.75rem 0.35rem;
+  }
+  .passwordConditionsDropdown {
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .brandBanner,
+  .subtitle,
+  .form .inputGroup:nth-child(1),
+  .form .inputGroup:nth-child(2),
+  .submitBtn {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

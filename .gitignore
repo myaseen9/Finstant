@@ -49,3 +49,11 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# ==========================================
+# Temporary Files & Local Uploads
+# ==========================================
+*.b64
+uploads/*
+!uploads/.gitkeep
+
+

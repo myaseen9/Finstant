@@ -47,7 +47,7 @@
   left: 0;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, var(--color-primary), #FF6B6B);
+  background: linear-gradient(90deg, #0EA5E9, #22B8CF);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -263,54 +263,202 @@
 
 /* Master File Section */
 .masterFileSection {
+  position: relative;
+  z-index: 30;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
-  margin-bottom: 2.5rem;
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.masterCardGrid {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 .masterFileInfo {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  align-items: flex-start;
+  gap: 1.15rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.masterFileInfo h3 {
+.masterFileIconBadge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.masterFileText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.masterFileTitle {
   color: var(--color-text);
   font-size: 1.1rem;
-  margin: 0 0 0.25rem 0;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
-.masterFileInfo p {
+.masterFileDesc {
   color: var(--color-text-muted);
   font-size: 0.85rem;
   margin: 0;
+  line-height: 1.45;
+}
+
+.masterCardActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .downloadMasterBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: var(--action);
-  color: var(--action-text);
+  background-color: var(--action, #1C1C1E);
+  color: var(--action-text, #FFFFFF);
   padding: 0.65rem 1.25rem;
-  border-radius: 8px;
+  border-radius: 10px;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  font-size: 0.88rem;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='light'] .downloadMasterBtn {
+  background-color: #1C1C1E;
+  color: #FFFFFF;
+}
+
+[data-theme='dark'] .downloadMasterBtn {
+  background-color: #22B8CF;
+  color: #0E1013;
 }
 
 .downloadMasterBtn:hover {
-  background-color: var(--action-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.masterDownloadedSuccess {
+  background-color: #10B981 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.appleTickIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: appleTickSpring 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes appleTickSpring {
+  0% {
+    transform: scale(0.3) rotate(-24deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.28) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.moreMenuWrapper {
+  position: relative;
+  z-index: 50;
+}
+
+.moreOptionsBtn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.moreOptionsBtn:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text);
+  border-color: var(--accent, #22B8CF);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 6px;
+  z-index: 1000;
+  min-width: 185px;
+  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: modalIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dropdownItem {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.dropdownItem:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
+}
+
+.dropdownDanger {
+  color: #ef4444;
+}
+
+.dropdownDanger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
 }
 
 /* History Section */
@@ -318,28 +466,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.15rem;
+  min-height: 38px;
+  gap: 1rem;
 }
 
 .historyHeader h2 {
   color: var(--color-text);
   font-size: 1.25rem;
-  margin: 0;
+  font-weight: 700;
+  margin: 0 !important;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
 }
 
 .btnClearHistory {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
-  background: transparent;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  padding: 0.45rem 0.9rem;
+  padding: 0.45rem 0.85rem;
+  height: 36px;
   border-radius: 8px;
   font-size: 0.825rem;
-  font-weight: 500;
+  font-weight: 550;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  margin: 0;
+  white-space: nowrap;
 }
 
 .btnClearHistory:hover {
@@ -347,18 +506,13 @@
   border-color: rgba(239, 68, 68, 0.35);
   color: #ef4444;
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }
-
-.historySection h2 {
-  color: var(--color-text);
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
 
 .noHistory {
   color: var(--color-text-muted);
   font-style: italic;
+  padding: 0.5rem 0;
 }
 
 .historyList {
@@ -640,28 +794,88 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 1rem;
+    padding: 1rem 0.85rem 2rem;
   }
   .section, .uploadSection, .masterFileSection {
-    padding: 1rem;
+    padding: 1.15rem 1rem;
+    border-radius: 16px;
   }
   .uploadDropzone {
-    padding: 1.5rem;
+    padding: 1.5rem 1rem;
   }
+
+  /* Responsive Master File Card Grid */
+  .masterCardGrid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.85rem 0.5rem;
+    align-items: start;
+  }
+
   .masterFileInfo {
-    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1;
+    gap: 0.75rem;
     align-items: flex-start;
-    gap: 0.5rem;
   }
+
+  .masterCardActions {
+    display: contents;
+  }
+
+  .moreMenuWrapper {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .moreOptionsBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .masterFileIconBadge {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .masterFileTitle {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .masterFileDesc {
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
   .downloadMasterBtn {
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
     justify-content: center;
-    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    margin-top: 0.2rem;
   }
+
   .historyItem {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    padding: 1rem;
+    border-radius: 14px;
+  }
+  .historyHeader {
+    margin-bottom: 0.95rem;
+    padding: 0 0.1rem;
+  }
+  .historyHeader h2 {
+    font-size: 1.12rem;
   }
   .fileStatus {
     width: 100%;
@@ -670,5 +884,68 @@
   .fileAction {
     margin-left: 0;
     align-self: flex-end;
+  }
+}
+
+/* Page Section Animations */
+.uploadSection {
+  animation: adminFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.masterFileSection {
+  animation: adminFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+
+.historySection {
+  position: relative;
+  z-index: 1;
+  animation: adminFadeIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.14s both;
+}
+
+.animatedItem {
+  animation: adminFadeIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton Loading Shimmer */
+.skeletonPulse {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-border);
+  border-radius: 6px;
+  opacity: 0.65;
+}
+
+.skeletonPulse::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.12) 20%,
+    rgba(255, 255, 255, 0.28) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: adminShimmer 1.6s infinite;
+}
+
+@keyframes adminShimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

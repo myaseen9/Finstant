@@ -19,6 +19,9 @@ export default function Login() {
   const [resetStep, setResetStep] = useState(1); // 1: Enter email, 2: Enter code + new password
   const [resetCode, setResetCode] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
+  const [showForgotOption, setShowForgotOption] = useState(false);
+  const [codeStatus, setCodeStatus] = useState('idle'); // 'idle' | 'verifying' | 'verified'
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const { setUser } = useContext(AppContext);
   const router = useRouter();
@@ -65,6 +68,7 @@ export default function Login() {
         setError('AWS requires you to set a permanent password.');
       } else {
         setError(err.message || 'Network error. Please try again.');
+        setShowForgotOption(true);
       }
       setLoading(false);
     }
@@ -72,7 +76,7 @@ export default function Login() {
 
   // Step 1: Send AWS Cognito Verification Code
   const handleSendResetCode = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!username.trim()) {
       setError('Please enter your email address.');
       return;
@@ -85,6 +89,8 @@ export default function Login() {
       const { requestReset } = await import('@/api/auth');
       await requestReset(username.trim());
       setResetStep(2);
+      setCodeStatus('idle');
+      setResetCode('');
       setSuccessMsg(`A 6-digit verification code has been sent to ${username}.`);
     } catch (err) {
       setError(err.message || 'Failed to send reset code. Verify email is correct.');
@@ -93,11 +99,36 @@ export default function Login() {
     }
   };
 
+  // Handle 6-Digit Code Input & Simulated Instant Verification
+  const handleCodeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setResetCode(val);
+    setError('');
+
+    if (val.length === 6) {
+      setCodeStatus('verifying');
+      setTimeout(() => {
+        setCodeStatus('verified');
+        setTimeout(() => {
+          document.getElementById('reset-new-password-input')?.focus();
+        }, 80);
+      }, 750);
+    } else {
+      if (codeStatus !== 'idle') {
+        setCodeStatus('idle');
+      }
+    }
+  };
+
   // Step 2: Confirm Code + Set New Permanent Password
   const handleConfirmReset = async (e) => {
     e.preventDefault();
-    if (!resetCode.trim() || !resetNewPassword) {
-      setError('Please fill in both the verification code and new password.');
+    if (codeStatus !== 'verified') {
+      setError('Please enter and verify the 6-digit code first.');
+      return;
+    }
+    if (!resetNewPassword) {
+      setError('Please set your new password.');
       return;
     }
 
@@ -112,8 +143,14 @@ export default function Login() {
       setResetCode('');
       setResetNewPassword('');
       setPassword('');
+      setCodeStatus('idle');
+      setIsPasswordFocused(false);
+      setShowForgotOption(false);
     } catch (err) {
       setError(err.message || 'Failed to reset password. Please check the code and requirements.');
+      if (err.message && (err.message.toLowerCase().includes('code') || err.message.toLowerCase().includes('mismatch'))) {
+        setCodeStatus('idle');
+      }
     } finally {
       setLoading(false);
     }
@@ -124,16 +161,32 @@ export default function Login() {
       <div className={styles.card}>
         <div className={styles.brandBanner}>
           <div className={styles.bannerLogoWrapper}>
-            <img src="/logo.svg" alt="Finstant Logo" className={styles.bannerLogo} />
+            <img src="/logo.svg" alt="FINSTΛNT Owl Logo" className={styles.bannerLogo} />
           </div>
-          <span className={styles.bannerText}>FINSTΛNT</span>
+          <span className={styles.bannerText}>FINST<span className={styles.lambda}>Λ</span>NT</span>
         </div>
         <p className={styles.subtitle}>
-          {isResetMode ? 'Secure Password Reset via AWS' : 'Sign in to your account'}
+          {isResetMode 
+            ? (resetStep === 1 ? 'Reset your password' : 'Enter verification code') 
+            : 'Sign in to your account'}
         </p>
 
+        {isResetMode && (
+          <div className={styles.stepIndicator}>
+            <div className={`${styles.stepPill} ${resetStep >= 1 ? styles.stepActive : ''}`}>
+              <span className={styles.stepNumber}>1</span>
+              <span>Email</span>
+            </div>
+            <div className={`${styles.stepDivider} ${resetStep >= 2 ? styles.stepDividerActive : ''}`} />
+            <div className={`${styles.stepPill} ${resetStep >= 2 ? styles.stepActive : ''}`}>
+              <span className={styles.stepNumber}>2</span>
+              <span>Set Password</span>
+            </div>
+          </div>
+        )}
+
         {successMsg && (
-          <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
+          <div className={isResetMode && resetStep === 2 ? styles.successBannerCompact : styles.successBanner}>
             {successMsg}
           </div>
         )}
@@ -157,7 +210,8 @@ export default function Login() {
               <input 
                 type="password" 
                 value={password} 
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="••••••••"
                 required
               />
             </div>
@@ -171,17 +225,17 @@ export default function Login() {
                   onChange={(e) => setNewPassword(e.target.value)} 
                   required
                 />
-                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <span style={{ color: newPassword.length >= 8 ? '#10b981' : '#9ca3af' }}>
+                <div className={styles.passwordChecklist}>
+                  <span className={styles.checklistItem} style={{ color: newPassword.length >= 8 ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
                     {newPassword.length >= 8 ? '✓' : '○'} At least 8 characters
                   </span>
-                  <span style={{ color: (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) ? '#10b981' : '#9ca3af' }}>
+                  <span className={styles.checklistItem} style={{ color: (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
                     {(/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) ? '✓' : '○'} Uppercase & lowercase letters
                   </span>
-                  <span style={{ color: /[0-9]/.test(newPassword) ? '#10b981' : '#9ca3af' }}>
+                  <span className={styles.checklistItem} style={{ color: /[0-9]/.test(newPassword) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
                     {/[0-9]/.test(newPassword) ? '✓' : '○'} At least one number
                   </span>
-                  <span style={{ color: /[^A-Za-z0-9]/.test(newPassword) ? '#10b981' : '#9ca3af' }}>
+                  <span className={styles.checklistItem} style={{ color: /[^A-Za-z0-9]/.test(newPassword) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
                     {/[^A-Za-z0-9]/.test(newPassword) ? '✓' : '○'} At least one special character
                   </span>
                 </div>
@@ -194,22 +248,24 @@ export default function Login() {
               {loading ? 'Authenticating...' : (newPasswordRequired ? 'Update Password' : 'Log In')}
             </button>
             
-            <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-              <button 
-                type="button" 
-                onClick={() => { setIsResetMode(true); setError(''); setSuccessMsg(''); setResetStep(1); }}
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  color: 'var(--color-primary)', 
-                  cursor: 'pointer', 
-                  fontSize: '0.85rem',
-                  textDecoration: 'underline' 
-                }}
-              >
-                Forgot Password? Reset with AWS Security
-              </button>
-            </div>
+            {/* Conditional Forgot Password Prompt (Only shows after failed attempt) */}
+            {showForgotOption && !newPasswordRequired && (
+              <div className={styles.forgotPrompt}>
+                <p className={styles.forgotText}>Forgot password?</p>
+                <button 
+                  type="button" 
+                  onClick={() => { 
+                    setIsResetMode(true); 
+                    setError(''); 
+                    setSuccessMsg(''); 
+                    setResetStep(1); 
+                  }}
+                  className={styles.resetLinkBtn}
+                >
+                  Click here to reset.
+                </button>
+              </div>
+            )}
           </form>
         ) : (
           /* FORGOT PASSWORD RESET FLOW */
@@ -226,25 +282,28 @@ export default function Login() {
                     required
                     autoFocus
                   />
-                  <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    AWS will send a 6-digit confirmation code to your registered email.
-                  </small>
-
+                  <span className={styles.helperText}>
+                    A 6-digit verification code will be sent to your registered email.
+                  </span>
                 </div>
 
                 {error && <div className={styles.errorMsg}>{error}</div>}
 
-                <button type="submit" className={styles.submitBtn} disabled={loading}>
-                  {loading ? 'Sending Code...' : 'Send Verification Code'}
-                </button>
-
-                <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                <div className={styles.resetActionsRow}>
                   <button 
                     type="button" 
                     onClick={() => { setIsResetMode(false); setError(''); setSuccessMsg(''); }}
-                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.85rem' }}
+                    className={styles.rowBtn}
                   >
-                    ← Back to Sign In
+                    Back to Sign In
+                  </button>
+
+                  <button 
+                    type="submit" 
+                    className={styles.rowBtn} 
+                    disabled={loading}
+                  >
+                    {loading ? 'Sending Code...' : 'Send Verification Code'}
                   </button>
                 </div>
               </form>
@@ -255,57 +314,115 @@ export default function Login() {
                   <input 
                     type="text" 
                     value={resetCode} 
-                    onChange={(e) => setResetCode(e.target.value)} 
+                    onChange={handleCodeChange} 
                     placeholder="123456"
+                    maxLength={6}
+                    className={`${styles.codeInput} ${codeStatus === 'verified' ? styles.codeVerifiedLocked : ''}`}
+                    readOnly={codeStatus === 'verified'}
+                    tabIndex={codeStatus === 'verified' ? -1 : 0}
                     required
                     autoFocus
                   />
+                  <div className={styles.inputEndAction}>
+                    {codeStatus === 'verifying' && (
+                      <div className={styles.verifyingBadge}>
+                        <span className={styles.windowsSpinner} />
+                        <span>Verifying...</span>
+                      </div>
+                    )}
+                    {codeStatus === 'verified' && (
+                      <div className={styles.codeStatusRow}>
+                        <div className={styles.verifiedBadge}>
+                          <span className={styles.minimalTick}>✓</span>
+                          <span>Verified</span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={(e) => { setCodeStatus('idle'); setResetCode(''); handleSendResetCode(e); }}
+                          className={styles.resendTextBtn}
+                          disabled={loading}
+                        >
+                          ↻ Resend
+                        </button>
+                      </div>
+                    )}
+                    {codeStatus === 'idle' && (
+                      <button 
+                        type="button" 
+                        onClick={(e) => { setCodeStatus('idle'); setResetCode(''); handleSendResetCode(e); }}
+                        className={styles.resendTextBtn}
+                        disabled={loading}
+                      >
+                        ↻ Resend Code
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>
                   <label>Set New Password</label>
-                  <input 
-                    type="password" 
-                    value={resetNewPassword} 
-                    onChange={(e) => setResetNewPassword(e.target.value)} 
-                    required
-                  />
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <span style={{ color: resetNewPassword.length >= 8 ? '#10b981' : '#9ca3af' }}>
-                      {resetNewPassword.length >= 8 ? '✓' : '○'} At least 8 characters
-                    </span>
-                    <span style={{ color: (/[A-Z]/.test(resetNewPassword) && /[a-z]/.test(resetNewPassword)) ? '#10b981' : '#9ca3af' }}>
-                      {(/[A-Z]/.test(resetNewPassword) && /[a-z]/.test(resetNewPassword)) ? '✓' : '○'} Uppercase & lowercase letters
-                    </span>
-                    <span style={{ color: /[0-9]/.test(resetNewPassword) ? '#10b981' : '#9ca3af' }}>
-                      {/[0-9]/.test(resetNewPassword) ? '✓' : '○'} At least one number
-                    </span>
-                    <span style={{ color: /[^A-Za-z0-9]/.test(resetNewPassword) ? '#10b981' : '#9ca3af' }}>
-                      {/[^A-Za-z0-9]/.test(resetNewPassword) ? '✓' : '○'} At least one special character
-                    </span>
+                  <div className={styles.passwordFieldWrapper}>
+                    {/* Upside dropdown: floats above the text box, only visible when user focuses on the password field */}
+                    {isPasswordFocused && codeStatus === 'verified' && (
+                      <div className={styles.passwordConditionsDropdown}>
+                        <div className={styles.dropdownTitle}>Password Requirements</div>
+                        <div className={styles.passwordChecklist} style={{ margin: 0, padding: 0, background: 'transparent', border: 'none' }}>
+                          <span className={styles.checklistItem} style={{ color: resetNewPassword.length >= 8 ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
+                            {resetNewPassword.length >= 8 ? '✓' : '○'} At least 8 characters
+                          </span>
+                          <span className={styles.checklistItem} style={{ color: (/[A-Z]/.test(resetNewPassword) && /[a-z]/.test(resetNewPassword)) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
+                            {(/[A-Z]/.test(resetNewPassword) && /[a-z]/.test(resetNewPassword)) ? '✓' : '○'} Uppercase & lowercase letters
+                          </span>
+                          <span className={styles.checklistItem} style={{ color: /[0-9]/.test(resetNewPassword) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
+                            {/[0-9]/.test(resetNewPassword) ? '✓' : '○'} At least one number
+                          </span>
+                          <span className={styles.checklistItem} style={{ color: /[^A-Za-z0-9]/.test(resetNewPassword) ? 'var(--accent, #22B8CF)' : '#9ca3af' }}>
+                            {/[^A-Za-z0-9]/.test(resetNewPassword) ? '✓' : '○'} At least one special character
+                          </span>
+                        </div>
+                        <div className={styles.dropdownArrow} />
+                      </div>
+                    )}
+
+                    <input 
+                      id="reset-new-password-input"
+                      type="password" 
+                      value={resetNewPassword} 
+                      onChange={(e) => setResetNewPassword(e.target.value)} 
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
+                      placeholder={codeStatus === 'verified' ? "••••••••" : "Verify code first"}
+                      disabled={codeStatus !== 'verified'}
+                      className={`${styles.passwordInput} ${codeStatus !== 'verified' ? styles.inputDisabled : ''}`}
+                      title={codeStatus !== 'verified' ? "Please enter the 6-digit verification code above first" : ""}
+                      required
+                    />
                   </div>
                 </div>
 
                 {error && <div className={styles.errorMsg}>{error}</div>}
 
-                <button type="submit" className={styles.submitBtn} disabled={loading} style={{ backgroundColor: 'var(--action)' }}>
-                  {loading ? 'Resetting Password...' : 'Save & Confirm New Password'}
-                </button>
-
-                <div style={{ marginTop: '1rem', textAlign: 'center', display: 'flex', justifyContent: 'space-between' }}>
+                <div className={styles.resetActionsRow}>
                   <button 
                     type="button" 
-                    onClick={handleSendResetCode}
-                    style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '0.8rem' }}
-                  >
-                    Resend Code
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => { setIsResetMode(false); setError(''); setSuccessMsg(''); }}
-                    style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.8rem' }}
+                    onClick={() => { 
+                      setIsResetMode(false); 
+                      setError(''); 
+                      setSuccessMsg(''); 
+                      setCodeStatus('idle');
+                      setIsPasswordFocused(false);
+                    }}
+                    className={styles.rowBtn}
                   >
                     Cancel
+                  </button>
+
+                  <button 
+                    type="submit" 
+                    className={styles.rowBtn} 
+                    disabled={loading || codeStatus !== 'verified'}
+                  >
+                    {loading ? 'Updating...' : 'Save & Confirm'}
                   </button>
                 </div>
               </form>

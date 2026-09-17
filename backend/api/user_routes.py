@@ -55,6 +55,7 @@ class CreateUserRequest(BaseModel):
     last_name: str = ""
     role: str = "user"  # "user" or "admin"
     designation: str = "Accountant"
+    sheets: list[str] = [] # Direct dataset permissions granted at creation time
 
 
 @router.post("/users")
@@ -155,6 +156,15 @@ async def create_user(req: CreateUserRequest, current_user: dict = Depends(requi
     # 4. Insert or Update in local PostgreSQL
     try:
         with engine.connect() as conn:
+            # Ensure table exists
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS user_sheet_access (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    sheet_name VARCHAR(255)
+                );
+            """))
+
             # Check if user already exists locally
             existing_db = conn.execute(
                 text("SELECT id, username, first_name, last_name, role, designation, is_active FROM app_user WHERE username = :uname OR cognito_sub_id = :sub"),
@@ -162,6 +172,7 @@ async def create_user(req: CreateUserRequest, current_user: dict = Depends(requi
             ).fetchone()
 
             if existing_db:
+                u_id = existing_db[0]
                 conn.execute(
                     text("""
                         UPDATE app_user 
@@ -171,9 +182,17 @@ async def create_user(req: CreateUserRequest, current_user: dict = Depends(requi
                     {
                         "role": req.role, "desig": req.designation,
                         "fname": full_name,
-                        "sub": cognito_sub, "id": existing_db[0]
+                        "sub": cognito_sub, "id": u_id
                     }
                 )
+                if req.sheets:
+                    conn.execute(text("DELETE FROM user_sheet_access WHERE user_id = :uid"), {"uid": u_id})
+                    for s in req.sheets:
+                        if s and s.strip():
+                            conn.execute(
+                                text("INSERT INTO user_sheet_access (user_id, sheet_name) VALUES (:uid, :sheet)"),
+                                {"uid": u_id, "sheet": s.strip()}
+                            )
                 conn.commit()
                 return {
                     "message": f"User '{cognito_username}' already existed in Cognito and is now synchronized!",
@@ -195,6 +214,16 @@ async def create_user(req: CreateUserRequest, current_user: dict = Depends(requi
                 "role": req.role, "desig": req.designation
             })
             row = result.fetchone()
+            new_uid = row[0]
+
+            if req.sheets:
+                conn.execute(text("DELETE FROM user_sheet_access WHERE user_id = :uid"), {"uid": new_uid})
+                for s in req.sheets:
+                    if s and s.strip():
+                        conn.execute(
+                            text("INSERT INTO user_sheet_access (user_id, sheet_name) VALUES (:uid, :sheet)"),
+                            {"uid": new_uid, "sheet": s.strip()}
+                        )
             conn.commit()
 
     except Exception as e:

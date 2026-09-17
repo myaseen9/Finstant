@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './SearchModal.module.css';
 
 export default function SearchModal({ isOpen, onClose, chats, onSelectChat }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -21,13 +27,13 @@ export default function SearchModal({ isOpen, onClose, chats, onSelectChat }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const filteredChats = chats.filter(chat => 
     chat.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.searchHeader}>
@@ -76,6 +82,7 @@ export default function SearchModal({ isOpen, onClose, chats, onSelectChat }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

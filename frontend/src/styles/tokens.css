@@ -28,19 +28,19 @@
   --space-16: 4rem;     /* 64px */
   --space-20: 5rem;     /* 80px */
 
-  /* --- Type families ---------------------------------------------------
-     Populated by next/font in src/lib/fonts.js, which sets --font-inter
-     and --font-plex-mono on <html>.                                      */
-  --font-sans:
-    var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, Helvetica, Arial, sans-serif;
+  /* --- Type families --------------------------------------------------- */
+  --font-roboto: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-anthropic-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-anthropic-serif: 'Lora', 'Charter', 'Georgia', 'Cambria', serif;
+
+  --font-sans: var(--font-roboto);
   --font-mono:
     var(--font-plex-mono), ui-monospace, SFMono-Regular, 'SF Mono',
     Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* Prose and UI */
   --font-body: var(--font-sans);
-  /* Headings share the Inter sans family */
+  /* Headings */
   --font-heading: var(--font-sans);
   /* Figures, table cells, labels */
   --font-data: var(--font-sans);
@@ -110,7 +110,7 @@
   --dur-fast: 140ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
-  --dur-theme: 420ms;
+  --dur-theme: 250ms;
 
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -156,4 +156,32 @@
   --bp-lg: 1024px;
   --bp-xl: 1280px;
   --bp-2xl: 1536px;
+}
+
+/* --- Font Family Switching via data-font on html --- */
+html[data-font='roboto'],
+:root[data-font='roboto'],
+[data-font='roboto'] {
+  --font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+  --font-body: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+  --font-heading: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+  --font-data: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+}
+
+html[data-font='anthropic-sans'],
+:root[data-font='anthropic-sans'],
+[data-font='anthropic-sans'] {
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  --font-body: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  --font-heading: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  --font-data: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+html[data-font='anthropic-serif'],
+:root[data-font='anthropic-serif'],
+[data-font='anthropic-serif'] {
+  --font-sans: 'Lora', 'Charter', 'Georgia', 'Cambria', serif !important;
+  --font-body: 'Lora', 'Charter', 'Georgia', 'Cambria', serif !important;
+  --font-heading: 'Lora', 'Charter', 'Georgia', 'Cambria', serif !important;
+  --font-data: 'Lora', 'Charter', 'Georgia', 'Cambria', serif !important;
 }

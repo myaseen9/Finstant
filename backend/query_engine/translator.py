@@ -29,13 +29,23 @@ import boto3
 BEDROCK_REGION = os.getenv("BEDROCK_REGION", os.getenv("AWS_REGION", "us-east-1"))
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-5-haiku-20241022-v1:0")
 
+def get_anthropic_api_key() -> str:
+    """Retrieve Anthropic or Claude API key from any commonly configured environment variable."""
+    return (
+        os.getenv("ANTHROPIC_API_KEY") or 
+        os.getenv("CLAUDE_API_KEY") or 
+        os.getenv("ANTHROPIC_KEY") or 
+        os.getenv("CLAUDE_KEY") or 
+        ""
+    ).strip()
+
 def get_bedrock_client():
     return boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
 
 def call_anthropic_direct(system_instruction: str, messages: list, tools=None, force_tool=False):
-    """Direct API call using Anthropic Messages API when ANTHROPIC_API_KEY is provided."""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    model = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001").strip()
+    """Direct API call using Anthropic Messages API when an Anthropic/Claude API key is provided."""
+    api_key = get_anthropic_api_key()
+    model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022").strip()
 
     anthropic_tools = []
     if tools:
@@ -111,13 +121,13 @@ def call_anthropic_direct(system_instruction: str, messages: list, tools=None, f
 
     candidate_models = [
         model,
-        "claude-haiku-4-5-20251001",
-        "claude-sonnet-4-5-20250929",
-        "claude-sonnet-4-6",
-        "claude-sonnet-5",
-        "claude-opus-4-5-20251101",
-        "claude-opus-4-6",
-        "claude-opus-5"
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
+        "claude-3-haiku-20240307",
+        "claude-3-sonnet-20240229",
+        "claude-3-opus-20240229",
+        "claude-3-5-sonnet-latest",
+        "claude-3-5-haiku-latest"
     ]
     seen = set()
     model_list = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
@@ -269,8 +279,9 @@ def call_bedrock(system_instruction: str, messages: list, tools=None, force_tool
     raise last_err
 
 def call_llm(system_instruction: str, messages: list, tools=None, force_tool=False):
-    """Hybrid router: Uses direct Anthropic API if ANTHROPIC_API_KEY is present; otherwise uses AWS Bedrock."""
-    if os.getenv("ANTHROPIC_API_KEY", "").strip():
+    """Hybrid router: Uses direct Anthropic API if an Anthropic/Claude API key is present; otherwise uses AWS Bedrock."""
+    anthropic_key = get_anthropic_api_key()
+    if anthropic_key:
         return call_anthropic_direct(system_instruction, messages, tools, force_tool=force_tool)
     else:
         return call_bedrock(system_instruction, messages, tools, force_tool=force_tool)
@@ -317,14 +328,22 @@ def run_query_loop(user_id: int, user_question: str, schema_context: dict, chat_
         "- 'ebitda' -> Refers to EBITDA / Operating Income.\n"
         "- 'fy' -> Refers to Fiscal Year.\n\n"
         "STRICT CONCISENESS & RESPONSE SHAPE RULES:\n"
-        "1. SINGLE-FACT QUESTION: Must be EXACTLY ONE natural sentence in the shape: '{Metric} for {period} was {value} {currency}.' followed by a newline source citation: 'Source: [sheet] sheet, [metric] row, [column] column — [file].'\n"
-        "   - Example: 'Software revenue for July 2025 was 4,200,000 PKR.'\n"
+        "1. SINGLE-FACT QUESTION: Must be EXACTLY ONE natural sentence in the shape: '{Metric} for {period} was **{value} {currency}**.' followed by the source citation on a clean new line.\n"
+        "   - Example: 'Software revenue for July 2025 was **4,200,000 PKR**.'\n"
+        "   - CRITICAL BOLD METRIC HIGHLIGHTING: Always wrap all final financial figures, numbers, monetary amounts, percentages, and metrics in bold markdown (e.g. `**4,200,000 PKR**`, `**$142,800**`, `**58.2%**`, `**145 employees**`) so the core answer is prominently highlighted.\n"
         "   - NEVER wrap a single fact in a Markdown table, bullet list, or introductory framing ('Based on the data...').\n"
+        "   - SOURCE CITATION FORMAT: End with a clean citation line on a new line: 'Source: [sheet name] ([file name])'.\n"
+        "     If multiple sheets were used, separate sheet names by comma: 'Source: [sheet1], [sheet2] ([file name])'.\n"
+        "     If multiple files were used: 'Source: [sheet] ([file1] and [file2])' (or comma-separated if 3+ files).\n"
+        "     Do NOT add 'row', 'column', or extra descriptions to the Source line.\n"
         "2. COMPARISON & RANKING QUESTIONS: Provide 2–3 sentences maximum answering the comparison directly, followed by the source citation.\n"
         "3. EXPLICIT TABLE / MULTI-ROW REQUESTS:\n"
         "   - ONLY output a Markdown table when the result contains genuinely multiple rows/records, or the user explicitly asked for a 'table', 'breakdown', or 'list all'.\n"
         "   - When a table is generated, keep the introductory text to a single concise sentence and follow immediately with the Markdown table and source citation.\n"
-        "4. NEVER add filler conversational intros or preambles (e.g., NEVER say 'Based on the database query results...', 'I can see that...', 'According to the data...', 'Sure! Here is...'). Start immediately with the direct answer.\n\n"
+        "4. EXECUTIVE REPORT & DETAILED ANALYSIS REQUESTS (e.g. 'generate report', 'detailed analysis', 'financial report', 'complete analysis', 'executive summary'):\n"
+        "   - Structure the response with a main Markdown Title (# Report Title), Executive Overview, Data Table Breakdown, and Key Takeaways/Findings.\n"
+        "   - Always append `<!-- SHOW_PDF_BUTTON -->` at the very end of the response so the UI registers it as a downloadable report and indexes it into the Files sidebar.\n"
+        "5. NEVER add filler conversational intros or preambles (e.g., NEVER say 'Based on the database query results...', 'I can see that...', 'According to the data...', 'Sure! Here is...'). Start immediately with the direct answer.\n\n"
         "DATABASE SCHEMA & FAST LOOKUP GUIDE:\n"
         "1. Table `kpi`: Contains monthly row-based metrics: `month`, `revenue`, `gross_profit`, `total_costs`, `gp_%`, `payroll/revenue_%`, `_source_file`.\n"
         "   - To find highest/lowest month or ratios (e.g. highest revenue in FY 2025-26 and its Payroll/Revenue %):\n"

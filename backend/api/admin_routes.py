@@ -132,6 +132,10 @@ async def delete_upload(file_id: int, current_user: dict = Depends(require_admin
                 kb_conn.execute(text(f"DELETE FROM {table} WHERE _source_file = :fname"), {"fname": filename})
             except Exception:
                 pass
+        try:
+            kb_conn.execute(text("TRUNCATE TABLE semantic_cache"))
+        except Exception:
+            pass
         kb_conn.commit()
 
     with engine.connect() as conn:
@@ -218,7 +222,11 @@ async def download_master(current_user: dict = Depends(require_admin)):
             if sheets_written == 0:
                 pd.DataFrame({"Status": ["No data available"]}).to_excel(writer, sheet_name="Empty Dataset", index=False)
 
-    return FileResponse(master_path, filename="Master_Financial_Dataset.xlsx")
+    return FileResponse(
+        master_path,
+        filename="Master_Financial_Dataset.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 @router.get("/uploads")
@@ -333,8 +341,21 @@ class UpdateUserAccessRequest(BaseModel):
 async def get_user_access(user_id: int, current_user: dict = Depends(require_admin)):
     engine = get_app_engine()
     with engine.connect() as conn:
-        res = conn.execute(text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"), {"uid": user_id}).fetchall()
-        return [r[0] for r in res]
+        # 1. Check user-specific access
+        user_rows = conn.execute(text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"), {"uid": user_id}).fetchall()
+        if user_rows:
+            return [r[0] for r in user_rows if r[0] and r[0] != '__NONE__']
+
+        # 2. If no custom override exists yet, return designation defaults
+        user_desig_row = conn.execute(text("SELECT designation FROM app_user WHERE id = :uid"), {"uid": user_id}).fetchone()
+        desig = (user_desig_row[0] if user_desig_row and user_desig_row[0] else "") or ""
+        if desig:
+            desig_rows = conn.execute(
+                text("SELECT sheet_name FROM designation_sheet_access WHERE LOWER(designation) = LOWER(:desig)"),
+                {"desig": desig}
+            ).fetchall()
+            return [r[0] for r in desig_rows if r[0]]
+        return []
 
 @router.post("/user-access")
 @router.post("/api/admin/user-access")
@@ -342,10 +363,14 @@ async def update_user_access(req: UpdateUserAccessRequest, current_user: dict = 
     engine = get_app_engine()
     with engine.connect() as conn:
         conn.execute(text("DELETE FROM user_sheet_access WHERE user_id = :uid"), {"uid": req.user_id})
-        for sheet in req.sheets:
-            conn.execute(text("INSERT INTO user_sheet_access (user_id, sheet_name) VALUES (:uid, :sheet)"), {"uid": req.user_id, "sheet": sheet})
+        if req.sheets:
+            for sheet in req.sheets:
+                conn.execute(text("INSERT INTO user_sheet_access (user_id, sheet_name) VALUES (:uid, :sheet)"), {"uid": req.user_id, "sheet": sheet})
+        else:
+            # Explicit empty access override
+            conn.execute(text("INSERT INTO user_sheet_access (user_id, sheet_name) VALUES (:uid, '__NONE__')"), {"uid": req.user_id})
         conn.commit()
-    return {"message": "User access override updated successfully"}
+    return {"message": "User access permissions updated successfully"}
 
 @router.get("/user-analytics/{user_id}")
 @router.get("/api/admin/user-analytics/{user_id}")
@@ -379,7 +404,7 @@ async def get_user_analytics(user_id: int, current_user: dict = Depends(require_
         
         return [
             {
-                "date": row[0].isoformat() if row[0] else None,
+                "date": row[0].strftime("%m/%d/%Y") if hasattr(row[0], 'strftime') else (str(row[0]) if row[0] else None),
                 "total": row[1],
                 "denied": row[2],
                 "analytical": row[3],
@@ -548,10 +573,10 @@ async def get_dashboard_metrics(year: str = Query(None), current_user: dict = De
         
         m_name = str(r[1]).strip()
         rev = clean_dashboard_num(r[2])
-        costs = clean_dashboard_num(r[3])
+        costs = abs(clean_dashboard_num(r[3]))
         prof = clean_dashboard_num(r[4])
         raw_gp = clean_dashboard_num(r[5])
-        gp_pct = raw_gp if raw_gp > 1.0 else raw_gp * 100.0
+        gp_pct = raw_gp * 100.0 if (0.0 < raw_gp <= 1.0) else raw_gp
 
         fy_data_map[fy]["months"][m_name] = {
             "month": m_name,
@@ -574,7 +599,7 @@ async def get_dashboard_metrics(year: str = Query(None), current_user: dict = De
         fy = get_fy_label(r[0])
         m_name = str(r[1]).strip()
         if fy in fy_data_map and m_name in fy_data_map[fy]["months"]:
-            fy_data_map[fy]["months"][m_name]["salary"] = clean_dashboard_num(r[2])
+            fy_data_map[fy]["months"][m_name]["salary"] = abs(clean_dashboard_num(r[2]))
 
     available_fys = sorted(list(fy_data_map.keys()))
 
@@ -593,7 +618,10 @@ async def get_dashboard_metrics(year: str = Query(None), current_user: dict = De
             tot_sal = sum(months_obj[m]["salary"] for m in FY_MONTH_ORDER if m in months_obj)
             hc_list = [months_obj[m]["headcount"] for m in FY_MONTH_ORDER if m in months_obj and months_obj[m]["headcount"] > 0]
             avg_hc = round(sum(hc_list) / len(hc_list)) if hc_list else 0
-            gp_margin = round((tot_prof / tot_rev) * 100.0, 2) if tot_rev > 0 else 0.0
+            
+            valid_gp_pcts = [months_obj[m]["gpPercent"] for m in months_obj if months_obj[m]["gpPercent"] > 0]
+            avg_gp_pct = round(sum(valid_gp_pcts) / len(valid_gp_pcts), 2) if valid_gp_pcts else 0.0
+            gp_margin = round((tot_prof / tot_rev) * 100.0, 2) if (tot_rev > 0 and tot_prof > 0) else avg_gp_pct
 
             annual_data.append({
                 "label": fy,
@@ -680,6 +708,49 @@ async def get_dashboard_metrics(year: str = Query(None), current_user: dict = De
 
     fy_avg_hc = round(sum(fy_hcs) / len(fy_hcs)) if fy_hcs else 0
 
+    # --- Compute Quarterly Data (Q1=Jul-Sep, Q2=Oct-Dec, Q3=Jan-Mar, Q4=Apr-Jun) ---
+    FY_QUARTERS = [
+        {"label": "Q1 (Jul-Sep)", "months": ["July", "August", "September"]},
+        {"label": "Q2 (Oct-Dec)", "months": ["October", "November", "December"]},
+        {"label": "Q3 (Jan-Mar)", "months": ["January", "February", "March"]},
+        {"label": "Q4 (Apr-Jun)", "months": ["April", "May", "June"]},
+    ]
+
+    quarterly_data = []
+    for q in FY_QUARTERS:
+        q_rev = q_cost = q_prof = q_sal = 0
+        q_hcs = []
+        q_gp_pcts = []
+        for m in q["months"]:
+            item = fy_months.get(m)
+            if item:
+                q_rev  += round(item.get("revenue", 0))
+                q_cost += round(item.get("costs", 0))
+                q_prof += round(item.get("profit", 0))
+                q_sal  += round(item.get("salary", 0))
+                hc = item.get("headcount", 0)
+                if hc > 0:
+                    q_hcs.append(hc)
+                gp = item.get("gpPercent", 0)
+                if gp > 0:
+                    q_gp_pcts.append(gp)
+
+        q_avg_hc  = round(sum(q_hcs) / len(q_hcs)) if q_hcs else 0
+        q_gp_margin = round((q_prof / q_rev) * 100.0, 2) if q_rev > 0 and q_prof > 0 else (
+            round(sum(q_gp_pcts) / len(q_gp_pcts), 2) if q_gp_pcts else 0.0
+        )
+
+        quarterly_data.append({
+            "label": q["label"],
+            "month": q["label"],
+            "revenue": q_rev,
+            "costs": q_cost,
+            "profit": q_prof,
+            "gpPercent": q_gp_margin,
+            "headcount": q_avg_hc,
+            "salary": q_sal
+        })
+
     with kb_engine.connect() as conn:
         single_currency = detect_dataset_currency(conn, fy_data_map.get(selected_fy, {}).get("sourceFile"))
 
@@ -688,6 +759,7 @@ async def get_dashboard_metrics(year: str = Query(None), current_user: dict = De
         "selectedYear": selected_fy,
         "currency": single_currency,
         "chartData": monthly_data,
+        "quarterlyData": quarterly_data,
         "overview": {
             "total_revenue": fy_rev,
             "gross_profit": fy_prof,

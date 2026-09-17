@@ -14,7 +14,23 @@ export default function AdminPanel() {
   const [showLiveFilesModal, setShowLiveFilesModal] = useState(false);
   const [liveFilesData, setLiveFilesData] = useState(null);
   const [loadingLiveFiles, setLoadingLiveFiles] = useState(false);
+  const [downloadingMaster, setDownloadingMaster] = useState(false);
+  const [masterDownloaded, setMasterDownloaded] = useState(false);
   const fileInputRef = useRef(null);
+  const masterMenuRef = useRef(null);
+  const masterTimerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (masterMenuRef.current && !masterMenuRef.current.contains(e.target)) {
+        setShowMasterMenu(false);
+      }
+    };
+    if (showMasterMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMasterMenu]);
 
   const fetchHistory = () => {
     authenticatedFetch('/uploads')
@@ -39,6 +55,49 @@ export default function AdminPanel() {
       console.error("Failed to fetch live files:", err);
     } finally {
       setLoadingLiveFiles(false);
+    }
+  };
+
+  const handleDownloadMaster = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (downloadingMaster) return;
+    setDownloadingMaster(true);
+    if (showHUD) showHUD('Generating consolidated Master File...', 'info');
+
+    try {
+      const res = await authenticatedFetch('/download-master');
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+      const rawBlob = await res.blob();
+      // Explicit MIME type ensures Chrome/Edge native top-right download tray catches and animates
+      const excelBlob = new Blob([rawBlob], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const downloadUrl = window.URL.createObjectURL(excelBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'Master_Financial_Dataset.xlsx';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+        if (link.parentNode) link.parentNode.removeChild(link);
+      }, 3000);
+
+      setMasterDownloaded(true);
+      if (masterTimerRef.current) clearTimeout(masterTimerRef.current);
+      masterTimerRef.current = setTimeout(() => {
+        setMasterDownloaded(false);
+      }, 2600);
+
+      if (showHUD) showHUD('Master Dataset downloaded successfully!', 'success');
+    } catch (err) {
+      console.error('Download Master error:', err);
+      if (showHUD) showHUD('Failed to download Master File: ' + err.message, 'error');
+    } finally {
+      setDownloadingMaster(false);
     }
   };
 
@@ -361,52 +420,80 @@ export default function AdminPanel() {
       </div>
 
       <div className={styles.masterFileSection}>
-        <div className={styles.masterFileInfo}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          <div>
-            <h3>Master Financial Dataset.xlsx</h3>
-            <p>The fully compiled dataset containing all appended records.</p>
+        <div className={styles.masterCardGrid}>
+          <div className={styles.masterFileInfo}>
+            <div className={styles.masterFileIconBadge}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <div className={styles.masterFileText}>
+              <h3 className={styles.masterFileTitle}>Master Financial Dataset.xlsx</h3>
+              <p className={styles.masterFileDesc}>The fully compiled dataset containing all appended records.</p>
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <a href={`${API_BASE}/download-master`} className={styles.downloadMasterBtn}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Master File
-          </a>
-          <div style={{ position: 'relative' }}>
+
+          <div className={styles.masterCardActions}>
             <button 
-              onClick={() => setShowMasterMenu(!showMasterMenu)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: '#6b7280', borderRadius: '4px' }}
-              title="More options"
+              type="button" 
+              onClick={handleDownloadMaster} 
+              disabled={downloadingMaster}
+              className={`${styles.downloadMasterBtn} ${masterDownloaded ? styles.masterDownloadedSuccess : ''}`}
+              style={{ cursor: downloadingMaster ? 'wait' : 'pointer', border: 'none' }}
+              title={masterDownloaded ? "Master File Downloaded!" : "Download consolidated master Excel workbook"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+              {downloadingMaster ? (
+                <div style={{
+                  width: 15,
+                  height: 15,
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#fff',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                  display: 'inline-block'
+                }} />
+              ) : masterDownloaded ? (
+                <span className={styles.appleTickIcon}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              )}
+              <span>{downloadingMaster ? 'Generating...' : (masterDownloaded ? 'Downloaded' : 'Master File')}</span>
             </button>
-            {showMasterMenu && (
-              <div style={{ position: 'absolute', top: '100%', right: '0', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '4px', zIndex: 10, minWidth: '160px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}>
-                <button 
-                  onClick={fetchLiveFiles}
-                  style={{ width: '100%', background: 'none', border: 'none', color: 'var(--color-text)', padding: '8px 12px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', fontSize: '0.875rem' }}
-                  onMouseEnter={(e) => e.target.style.background = 'var(--color-surface-hover, rgba(0,0,0,0.05))'}
-                  onMouseLeave={(e) => e.target.style.background = 'none'}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                  Live Files
-                </button>
-                <button 
-                  onClick={handleWipeAll}
-                  style={{ width: '100%', background: 'none', border: 'none', color: '#ef4444', padding: '8px 12px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px', fontSize: '0.875rem' }}
-                  onMouseEnter={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.1)'}
-                  onMouseLeave={(e) => e.target.style.background = 'none'}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  Wipe Database
-                </button>
-              </div>
-            )}
+
+            <div className={styles.moreMenuWrapper} ref={masterMenuRef}>
+              <button 
+                onClick={() => setShowMasterMenu(!showMasterMenu)}
+                className={styles.moreOptionsBtn}
+                title="More dataset options"
+                aria-label="More dataset options"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+              </button>
+              {showMasterMenu && (
+                <div className={styles.dropdownMenu}>
+                  <button onClick={fetchLiveFiles} className={styles.dropdownItem}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Live Files in DB</span>
+                  </button>
+                  <button onClick={handleWipeAll} className={`${styles.dropdownItem} ${styles.dropdownDanger}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <span>Wipe Database</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -537,8 +624,8 @@ export default function AdminPanel() {
                 type="button" 
                 onClick={confirmClearHistory}
                 style={{ 
-                  background: 'var(--color-primary)', 
-                  color: '#fff', 
+                  background: 'var(--action)', 
+                  color: 'var(--action-text)', 
                   border: 'none', 
                   borderRadius: '10px', 
                   padding: '0.6rem 1.25rem', 

@@ -28,14 +28,14 @@ def get_current_user(request: Request) -> dict:
     and returns the authenticated user's info from the local database.
     """
     auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        # Fallback to cookies for older clients or server-side requests (if still needed)
-        # But generally, SPAs should send Bearer tokens.
-        token = request.cookies.get("finstant_token")
-        if not token:
-            raise HTTPException(status_code=401, detail="Authentication required")
-    else:
+    if auth_header.startswith("Bearer "):
         token = auth_header.replace("Bearer ", "")
+    elif request.cookies.get("finstant_token"):
+        token = request.cookies.get("finstant_token")
+    elif request.query_params.get("token"):
+        token = request.query_params.get("token")
+    else:
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
         claims = jwt.decode(
@@ -49,25 +49,36 @@ def get_current_user(request: Request) -> dict:
         print(f"JWT Validation Error: {e}")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    cognito_sub_id = claims["sub"]
+    cognito_sub_id = claims.get("sub")
+    email_val = (claims.get("email") or "").strip()
+    cognito_uname = (claims.get("cognito:username") or "").strip()
+    uname_val = email_val or cognito_uname or (claims.get("username") or "").strip()
     groups = claims.get("cognito:groups", [])
     computed_role = "superadmin" if "SuperAdmin" in groups else ("admin" if "Admin" in groups else "user")
 
     engine = get_app_engine()
     with engine.connect() as conn:
-        uname_val = claims.get("email") or claims.get("cognito:username") or claims.get("username", "")
         row = conn.execute(
             text("""
-                SELECT id, username, role, first_name, last_name, designation
+                SELECT id, username, role, first_name, last_name, designation, cognito_sub_id
                 FROM app_user
-                WHERE cognito_sub_id = :sub OR username = :uname
+                WHERE (cognito_sub_id IS NOT NULL AND cognito_sub_id = :sub)
+                   OR (username IS NOT NULL AND LOWER(username) = LOWER(:email))
+                   OR (username IS NOT NULL AND LOWER(username) = LOWER(:cognito_uname))
+                   OR (username IS NOT NULL AND LOWER(username) = LOWER(:uname))
+                ORDER BY id ASC
+                LIMIT 1
             """),
-            {"sub": cognito_sub_id, "uname": uname_val}
+            {
+                "sub": cognito_sub_id,
+                "email": email_val,
+                "cognito_uname": cognito_uname,
+                "uname": uname_val
+            }
         ).fetchone()
 
         if not row:
             # The user exists in Cognito but hasn't been synced to the local DB yet.
-            # Auto-sync user directly so all protected routes work smoothly!
             fname = claims.get("given_name") or claims.get("name") or claims.get("cognito:username") or "User"
             lname = claims.get("family_name", "")
             desig = groups[0] if groups else "User"
@@ -75,7 +86,7 @@ def get_current_user(request: Request) -> dict:
                 text("""
                     INSERT INTO app_user (username, cognito_sub_id, first_name, last_name, role, designation, is_active, created_at)
                     VALUES (:uname, :sub, :fname, :lname, :role, :desig, true, now())
-                    RETURNING id, username, role, first_name, last_name, designation
+                    RETURNING id, username, role, first_name, last_name, designation, cognito_sub_id
                 """),
                 {
                     "uname": uname_val, "sub": cognito_sub_id, "fname": fname,
@@ -84,8 +95,17 @@ def get_current_user(request: Request) -> dict:
             )
             conn.commit()
             row = res.fetchone()
+        else:
+            # If matched by username/email but cognito_sub_id was not set or changed, sync it now
+            user_id, username, db_role, first_name, last_name, designation, stored_sub = row
+            if not stored_sub or stored_sub != cognito_sub_id:
+                conn.execute(
+                    text("UPDATE app_user SET cognito_sub_id = :sub WHERE id = :id"),
+                    {"sub": cognito_sub_id, "id": user_id}
+                )
+                conn.commit()
 
-        user_id, username, db_role, first_name, last_name, designation = row
+        user_id, username, db_role, first_name, last_name, designation = row[:6]
 
     full_name = f"{first_name} {last_name}".strip() if (first_name or last_name) else username
 
@@ -96,7 +116,8 @@ def get_current_user(request: Request) -> dict:
         "name": full_name,
         "first_name": full_name,
         "last_name": last_name,
-        "role": computed_role, # Favor Cognito groups for role
+        "role": computed_role if computed_role != "user" else db_role,
+        "designation": designation,
         "designations": groups
     }
 

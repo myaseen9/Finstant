@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { AppContext } from './_app';
@@ -36,6 +36,17 @@ const formatCurrency = (value, currency = 'PKR') => {
     return `${sign}${prefix}${(val / 1000).toFixed(1)}K`;
   }
   return `${sign}${prefix}${val.toLocaleString()}`;
+};
+
+const formatCompactAxis = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return '0';
+  const isNegative = Number(val) < 0;
+  const v = Math.abs(Number(val));
+  const sign = isNegative ? '-' : '';
+  if (v >= 1000000000) return `${sign}${(v / 1000000000).toFixed(1)}B`;
+  if (v >= 1000000) return `${sign}${Math.round(v / 1000000)}M`;
+  if (v >= 1000) return `${sign}${Math.round(v / 1000)}K`;
+  return `${sign}${Math.round(v)}`;
 };
 
 const formatFullNumber = (value) => {
@@ -84,6 +95,68 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState('All');
   const [chartType, setChartType] = useState('bar'); // 'bar' | 'area'
   const [timeGranularity, setTimeGranularity] = useState('monthly'); // 'monthly' | 'quarterly'
+
+  const yearScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkYearScroll = () => {
+    if (yearScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = yearScrollRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    }
+  };
+
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+
+  const handleMouseDown = (e) => {
+    if (!yearScrollRef.current) return;
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX - yearScrollRef.current.offsetLeft;
+    scrollLeftRef.current = yearScrollRef.current.scrollLeft;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current || !yearScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - yearScrollRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    yearScrollRef.current.scrollLeft = scrollLeftRef.current - walk;
+    checkYearScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
+
+  const scrollYears = (direction) => {
+    if (yearScrollRef.current) {
+      const amount = direction === 'left' ? -180 : 180;
+      yearScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(checkYearScroll, 320);
+    }
+  };
+
+  useEffect(() => {
+    checkYearScroll();
+    window.addEventListener('resize', checkYearScroll);
+    let resizeObserver;
+    if (yearScrollRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        checkYearScroll();
+      });
+      resizeObserver.observe(yearScrollRef.current);
+    }
+    const timer = setTimeout(checkYearScroll, 120);
+    return () => {
+      window.removeEventListener('resize', checkYearScroll);
+      if (resizeObserver) resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [data, selectedYear]);
 
   useEffect(() => {
     if (!user) {
@@ -138,6 +211,16 @@ export default function Dashboard() {
 
   const dynamicSubtitle = isAllYears ? getAllYearsRange() : selectedYear;
 
+  // Compute dynamic CSS mask fade state for the pill rail
+  let trackMaskClass = styles.maskNone;
+  if (canScrollLeft && canScrollRight) {
+    trackMaskClass = styles.maskBoth;
+  } else if (canScrollRight) {
+    trackMaskClass = styles.maskRightOnly;
+  } else if (canScrollLeft) {
+    trackMaskClass = styles.maskLeftOnly;
+  }
+
   return (
     <Layout>
       <Head>
@@ -154,68 +237,146 @@ export default function Dashboard() {
 
           {/* Interactive Filters and View Controls */}
           <div className={styles.controlsBar}>
-            {/* Fiscal Year Pill Tabs */}
-            <div className={styles.pillGroup}>
+            {/* Continuous Capsule Pill Rail with Smooth Gradient Dissolve & Arrows */}
+            <div className={styles.capsuleRailContainer}>
+              {/* Floating Left Arrow */}
               <button 
-                className={`${styles.pillBtn} ${selectedYear === 'All' ? styles.activePill : ''}`}
-                onClick={() => setSelectedYear('All')}
+                type="button" 
+                className={`${styles.capsuleArrow} ${styles.capsuleArrowLeft} ${canScrollLeft ? styles.capsuleArrowVisible : ''}`} 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  scrollYears('left');
+                }}
+                title="Scroll previous years"
+                aria-label="Scroll previous years"
               >
-                All Years
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
               </button>
-              {years.map(y => (
+
+              {/* Scrollable Track with Edge Fade */}
+              <div 
+                className={`${styles.pillGroup} ${trackMaskClass}`} 
+                ref={yearScrollRef} 
+                onScroll={checkYearScroll}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUpOrLeave}
+                onMouseLeave={handleMouseUpOrLeave}
+              >
                 <button 
-                  key={y} 
-                  className={`${styles.pillBtn} ${selectedYear === y ? styles.activePill : ''}`}
-                  onClick={() => setSelectedYear(y)}
+                  className={`${styles.pillBtn} ${selectedYear === 'All' ? styles.activePill : ''}`}
+                  onClick={() => setSelectedYear('All')}
                 >
-                  {y}
+                  All Years
                 </button>
-              ))}
+                {years.map(y => (
+                  <button 
+                    key={y} 
+                    className={`${styles.pillBtn} ${selectedYear === y ? styles.activePill : ''}`}
+                    onClick={() => setSelectedYear(y)}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+
+              {/* Floating Right Arrow */}
+              <button 
+                type="button" 
+                className={`${styles.capsuleArrow} ${styles.capsuleArrowRight} ${canScrollRight ? styles.capsuleArrowVisible : ''}`} 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  scrollYears('right');
+                }}
+                title="Scroll next years"
+                aria-label="Scroll next years"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
             </div>
 
-            {/* In Single FY mode: Monthly vs Quarterly Toggle */}
-            {!isAllYears && (
-              <div className={styles.pillGroup}>
+            {/* View & Granularity Controls */}
+            <div className={styles.controlsRight}>
+              {/* In Single FY mode: Monthly vs Quarterly Toggle */}
+              {!isAllYears && (
+                <div className={styles.granularityPillGroup}>
+                  <button 
+                    className={`${styles.pillBtn} ${timeGranularity === 'monthly' ? styles.activePill : ''}`}
+                    onClick={() => setTimeGranularity('monthly')}
+                  >
+                    Monthly (Jul-Jun)
+                  </button>
+                  <button 
+                    className={`${styles.pillBtn} ${timeGranularity === 'quarterly' ? styles.activePill : ''}`}
+                    onClick={() => setTimeGranularity('quarterly')}
+                  >
+                    Quarterly (Q1-Q4)
+                  </button>
+                </div>
+              )}
+
+              {/* Chart Type Toggle (Bar vs Area) */}
+              <div className={styles.viewToggleGroup}>
                 <button 
-                  className={`${styles.pillBtn} ${timeGranularity === 'monthly' ? styles.activePill : ''}`}
-                  onClick={() => setTimeGranularity('monthly')}
+                  className={`${styles.viewToggleBtn} ${chartType === 'bar' ? styles.activeToggle : ''}`}
+                  onClick={() => setChartType('bar')}
+                  title="Bar Chart View"
                 >
-                  Monthly (Jul-Jun)
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
                 </button>
                 <button 
-                  className={`${styles.pillBtn} ${timeGranularity === 'quarterly' ? styles.activePill : ''}`}
-                  onClick={() => setTimeGranularity('quarterly')}
+                  className={`${styles.viewToggleBtn} ${chartType === 'area' ? styles.activeToggle : ''}`}
+                  onClick={() => setChartType('area')}
+                  title="Smooth Area / Line View"
                 >
-                  Quarterly (Q1-Q4)
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 </button>
               </div>
-            )}
-
-            {/* Chart Type Toggle (Bar vs Area) */}
-            <div className={styles.viewToggleGroup}>
-              <button 
-                className={`${styles.viewToggleBtn} ${chartType === 'bar' ? styles.activeToggle : ''}`}
-                onClick={() => setChartType('bar')}
-                title="Bar Chart View"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
-              </button>
-              <button 
-                className={`${styles.viewToggleBtn} ${chartType === 'area' ? styles.activeToggle : ''}`}
-                onClick={() => setChartType('area')}
-                title="Smooth Area / Line View"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Loading Spinner */}
+        {/* Sleek Skeleton Loading Scene */}
         {loading && !data && (
-          <div className={styles.loadingContainer}>
-            <div className={styles.spinner} />
-            <p>Aggregating Financial Insights...</p>
+          <div className={styles.skeletonContainer}>
+            <div className={styles.skeletonStatusBadge}>
+              <div className={styles.spinner} style={{ width: 14, height: 14, borderWidth: 2 }} />
+              <span>Aggregating Financial Insights...</span>
+            </div>
+
+            {/* Skeleton Metric Cards */}
+            <div className={styles.metricsGrid}>
+              {[1, 2, 3, 4].map(n => (
+                <div key={n} className={`${styles.card} ${styles.skeletonCard}`}>
+                  <div className={styles.skeletonPulse} style={{ width: '45%', height: 14 }} />
+                  <div className={styles.skeletonPulse} style={{ width: '70%', height: 28, margin: '8px 0' }} />
+                  <div className={styles.skeletonPulse} style={{ width: '35%', height: 12 }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Skeleton Main Chart Card */}
+            <div className={`${styles.chartCard} ${styles.skeletonChartCard}`}>
+              <div>
+                <div className={styles.skeletonPulse} style={{ width: '30%', height: 18, marginBottom: 8 }} />
+                <div className={styles.skeletonPulse} style={{ width: '50%', height: 12 }} />
+              </div>
+              <div className={styles.skeletonChartBars}>
+                {[35, 60, 48, 85, 42, 75, 55, 92, 65, 80, 50, 95].map((h, i) => (
+                  <div 
+                    key={i} 
+                    className={styles.skeletonBarCol} 
+                    style={{ height: `${h}%`, animationDelay: `${i * 90}ms` }} 
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -230,7 +391,7 @@ export default function Dashboard() {
         {data && (
           <>
             <div className={styles.metricsGrid}>
-              <div className={styles.card}>
+              <div className={styles.card} style={{ animationDelay: '0ms' }}>
                 <div className={styles.cardHeader}>
                   <span className={styles.cardLabel}>Total Revenue</span>
                   <div className={styles.cardIconBox}>
@@ -247,7 +408,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={styles.card}>
+              <div className={styles.card} style={{ animationDelay: '80ms' }}>
                 <div className={styles.cardHeader}>
                   <span className={styles.cardLabel}>Gross Profit</span>
                   <div className={styles.cardIconBox} style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
@@ -262,7 +423,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={styles.card}>
+              <div className={styles.card} style={{ animationDelay: '160ms' }}>
                 <div className={styles.cardHeader}>
                   <span className={styles.cardLabel}>Avg Headcount</span>
                   <div className={styles.cardIconBox}>
@@ -275,7 +436,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className={styles.card}>
+              <div className={styles.card} style={{ animationDelay: '240ms' }}>
                 <div className={styles.cardHeader}>
                   <span className={styles.cardLabel}>Total Salary</span>
                   <div className={styles.cardIconBox} style={{ color: '#6366f1', background: 'rgba(99, 102, 241, 0.1)' }}>
@@ -292,7 +453,7 @@ export default function Dashboard() {
             {/* Charts Grid */}
             <div className={styles.chartsGrid}>
               {/* Main Financial Performance Chart: Revenue vs Total Costs & Gross Profit */}
-              <div className={styles.chartCard}>
+              <div className={styles.chartCard} style={{ animationDelay: '220ms' }}>
                 <div className={styles.chartHeader}>
                   <div>
                     <h3 className={styles.chartTitle}>
@@ -308,20 +469,20 @@ export default function Dashboard() {
                 </div>
 
                 <div className={styles.chartWrapper}>
-                  <ResponsiveContainer width="100%" height={340}>
+                  <ResponsiveContainer width="100%" height={320}>
                     {chartType === 'bar' ? (
-                      <BarChart data={activeDataset} margin={{ top: 10, right: 15, left: 30, bottom: 5 }}>
+                      <BarChart data={activeDataset} margin={{ top: 15, right: 15, left: 10, bottom: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} opacity={0.6} />
-                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} />
-                        <YAxis width={85} tickFormatter={(val) => formatCurrency(val, data?.currency)} stroke="var(--color-text-muted)" tickLine={false} />
+                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} dy={6} />
+                        <YAxis width={46} tickFormatter={formatCompactAxis} stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
                         <Tooltip content={<CustomChartTooltip currency={data?.currency} />} />
-                        <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                        <Bar dataKey="revenue" name="Revenue" fill="#22B8CF" radius={[6, 6, 0, 0]} maxBarSize={45} minPointSize={3} />
-                        <Bar dataKey="costs" name="Total Costs" fill="#6366F1" radius={[6, 6, 0, 0]} maxBarSize={45} minPointSize={3} />
-                        <Bar dataKey="profit" name="Gross Profit" fill="#10B981" radius={[6, 6, 0, 0]} maxBarSize={45} minPointSize={5} />
+                        <Legend wrapperStyle={{ paddingTop: '12px' }} />
+                        <Bar isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" dataKey="revenue" name="Revenue" fill="#22B8CF" radius={[5, 5, 0, 0]} maxBarSize={38} />
+                        <Bar isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" animationBegin={120} dataKey="costs" name="Total Costs" fill="#6366F1" radius={[5, 5, 0, 0]} maxBarSize={38} />
+                        <Bar isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" animationBegin={240} dataKey="profit" name="Gross Profit" fill="#10B981" radius={[5, 5, 0, 0]} maxBarSize={38} />
                       </BarChart>
                     ) : (
-                      <AreaChart data={activeDataset} margin={{ top: 10, right: 15, left: 30, bottom: 5 }}>
+                      <AreaChart data={activeDataset} margin={{ top: 15, right: 15, left: 10, bottom: 8 }}>
                         <defs>
                           <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#22B8CF" stopOpacity={0.4}/>
@@ -337,13 +498,13 @@ export default function Dashboard() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} opacity={0.6} />
-                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} />
-                        <YAxis width={85} tickFormatter={(val) => formatCurrency(val, data?.currency)} stroke="var(--color-text-muted)" tickLine={false} />
+                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} dy={6} />
+                        <YAxis width={46} tickFormatter={formatCompactAxis} stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
                         <Tooltip content={<CustomChartTooltip currency={data?.currency} />} />
-                        <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                        <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#22B8CF" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                        <Area type="monotone" dataKey="costs" name="Total Costs" stroke="#6366F1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCost)" />
-                        <Area type="monotone" dataKey="profit" name="Gross Profit" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorProf)" />
+                        <Legend wrapperStyle={{ paddingTop: '12px' }} />
+                        <Area isAnimationActive={true} animationDuration={1100} animationEasing="ease-out" type="monotone" dataKey="revenue" name="Revenue" stroke="#22B8CF" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                        <Area isAnimationActive={true} animationDuration={1100} animationEasing="ease-out" animationBegin={150} type="monotone" dataKey="costs" name="Total Costs" stroke="#6366F1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCost)" />
+                        <Area isAnimationActive={true} animationDuration={1100} animationEasing="ease-out" animationBegin={300} type="monotone" dataKey="profit" name="Gross Profit" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorProf)" />
                       </AreaChart>
                     )}
                   </ResponsiveContainer>
@@ -353,7 +514,7 @@ export default function Dashboard() {
               {/* Dual Column Bottom Charts */}
               <div className={styles.chartsGridDual}>
                 {/* Profit Margin % Trend */}
-                <div className={styles.chartCard}>
+                <div className={styles.chartCard} style={{ animationDelay: '300ms' }}>
                   <div className={styles.chartHeader}>
                     <div>
                       <h3 className={styles.chartTitle}>
@@ -368,20 +529,20 @@ export default function Dashboard() {
 
                   <div className={styles.chartWrapper}>
                     <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={activeDataset} margin={{ top: 10, right: 15, left: 15, bottom: 5 }}>
+                      <LineChart data={activeDataset} margin={{ top: 15, right: 15, left: 10, bottom: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} opacity={0.6} />
-                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} />
-                        <YAxis width={55} unit="%" stroke="var(--color-text-muted)" tickLine={false} />
+                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} dy={6} />
+                        <YAxis width={42} unit="%" domain={[0, 'auto']} tickFormatter={(v) => `${Math.round(v)}`} stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
                         <Tooltip content={<CustomChartTooltip isPercent={true} currency={data?.currency} />} />
-                        <Legend />
-                        <Line type="monotone" dataKey="gpPercent" name="GP Margin (%)" stroke="#10B981" strokeWidth={3} dot={{ r: 5, fill: '#10B981', strokeWidth: 2, stroke: '#FFFFFF' }} activeDot={{ r: 7 }} />
+                        <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                        <Line isAnimationActive={true} animationDuration={1200} animationEasing="ease-out" type="monotone" dataKey="gpPercent" name="GP Margin (%)" stroke="#10B981" strokeWidth={3} dot={{ r: 4, fill: '#10B981', strokeWidth: 2, stroke: '#FFFFFF' }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
                 {/* Workforce & Total Salary Dynamics */}
-                <div className={styles.chartCard}>
+                <div className={styles.chartCard} style={{ animationDelay: '360ms' }}>
                   <div className={styles.chartHeader}>
                     <div>
                       <h3 className={styles.chartTitle}>
@@ -394,15 +555,15 @@ export default function Dashboard() {
 
                   <div className={styles.chartWrapper}>
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={activeDataset} margin={{ top: 10, right: 15, left: 25, bottom: 5 }}>
+                      <BarChart data={activeDataset} margin={{ top: 15, right: 10, left: 10, bottom: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} opacity={0.6} />
-                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} />
-                        <YAxis yAxisId="left" width={45} stroke="var(--color-text-muted)" tickLine={false} />
-                        <YAxis yAxisId="right" width={85} orientation="right" tickFormatter={(val) => formatCurrency(val, data?.currency)} stroke="var(--color-text-muted)" tickLine={false} />
+                        <XAxis dataKey="label" stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} dy={6} />
+                        <YAxis yAxisId="left" width={40} stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
+                        <YAxis yAxisId="right" width={46} orientation="right" tickFormatter={formatCompactAxis} stroke="var(--color-text-muted)" tickLine={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
                         <Tooltip content={<CustomChartTooltip currency={data?.currency} />} />
-                        <Legend />
-                        <Bar yAxisId="left" dataKey="headcount" name="Headcount" fill="#F59E0B" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                        <Bar yAxisId="right" dataKey="salary" name="Total Salary" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                        <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                        <Bar isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" yAxisId="left" dataKey="headcount" name="Headcount" fill="#F59E0B" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                        <Bar isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" animationBegin={150} yAxisId="right" dataKey="salary" name="Total Salary" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={28} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

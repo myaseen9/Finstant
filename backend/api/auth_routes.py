@@ -37,7 +37,9 @@ async def sync_user(request: Request):
     import traceback
     try:
         cognito_sub_id = claims["sub"]
-        username = claims.get("email") or claims.get("cognito:username") or claims.get("username", "")
+        email_val = (claims.get("email") or "").strip()
+        cognito_uname = (claims.get("cognito:username") or "").strip()
+        username = email_val or cognito_uname or (claims.get("username") or "").strip()
         first_name = claims.get("given_name") or claims.get("name") or claims.get("cognito:username") or "User"
         last_name = claims.get("family_name", "")
         groups = claims.get("cognito:groups", [])
@@ -48,8 +50,22 @@ async def sync_user(request: Request):
         engine = get_app_engine()
         with engine.connect() as conn:
             row = conn.execute(
-                text("SELECT id, role, designation FROM app_user WHERE cognito_sub_id = :sub OR username = :uname"),
-                {"sub": cognito_sub_id, "uname": username}
+                text("""
+                    SELECT id, role, designation, cognito_sub_id
+                    FROM app_user
+                    WHERE (cognito_sub_id IS NOT NULL AND cognito_sub_id = :sub)
+                       OR (username IS NOT NULL AND LOWER(username) = LOWER(:email))
+                       OR (username IS NOT NULL AND LOWER(username) = LOWER(:cognito_uname))
+                       OR (username IS NOT NULL AND LOWER(username) = LOWER(:uname))
+                    ORDER BY id ASC
+                    LIMIT 1
+                """),
+                {
+                    "sub": cognito_sub_id,
+                    "email": email_val,
+                    "cognito_uname": cognito_uname,
+                    "uname": username
+                }
             ).fetchone()
     
             if not row:
@@ -66,7 +82,8 @@ async def sync_user(request: Request):
                 )
                 conn.commit()
             else:
-                user_id, current_role, current_desig = row
+                user_id, current_role, current_desig, stored_sub = row
+                final_role = computed_role if computed_role != "user" else (current_role or "user")
                 new_desig = designation if (groups and groups[0] in ["SuperAdmin", "Admin"]) else (current_desig or designation)
                 conn.execute(
                     text("""
@@ -80,7 +97,7 @@ async def sync_user(request: Request):
                     """),
                     {
                         "sub": cognito_sub_id,
-                        "role": computed_role,
+                        "role": final_role,
                         "desig": new_desig,
                         "fname": first_name,
                         "lname": last_name,

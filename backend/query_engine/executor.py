@@ -79,24 +79,46 @@ def execute_function(user_id: int, func_name: str, args: dict, step: int = 1) ->
     try:
         app_engine = get_app_engine()
         with app_engine.connect() as conn:
-            user_row = conn.execute(text("SELECT role FROM app_user WHERE id = :uid"), {"uid": user_id}).fetchone()
+            user_row = conn.execute(text("SELECT role, designation FROM app_user WHERE id = :uid"), {"uid": user_id}).fetchone()
             role = user_row[0] if user_row else "user"
+            user_desig = user_row[1] if user_row and len(user_row) > 1 and user_row[1] else ""
             
             if role not in ["admin", "superadmin"]:
-                access_res = conn.execute(text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"), {"uid": user_id}).fetchall()
-                allowed_tables = {r[0] for r in access_res}
+                try:
+                    user_access_rows = conn.execute(
+                        text("SELECT sheet_name FROM user_sheet_access WHERE user_id = :uid"),
+                        {"uid": user_id}
+                    ).fetchall()
+                    if user_access_rows:
+                        allowed_raw = [r[0] for r in user_access_rows if r[0]]
+                    else:
+                        desig_access_rows = conn.execute(
+                            text("SELECT sheet_name FROM designation_sheet_access WHERE LOWER(designation) = LOWER(:desig)"),
+                            {"desig": user_desig}
+                        ).fetchall()
+                        allowed_raw = [r[0] for r in desig_access_rows if r[0]]
+                    allowed_tables = set(allowed_raw)
+                except Exception:
+                    allowed_tables = set()
                 
                 kb_engine_check = get_kb_engine()
                 with kb_engine_check.connect() as kb_conn:
-                    actual_tables = {r[0] for r in kb_conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()}
+                    actual_tables = {r[0].lower().strip() for r in kb_conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()}
                 
                 parsed = sqlglot.parse_one(query_str, read="postgres")
                 for table in parsed.find_all(exp.Table):
-                    tbl_name = table.name
-                    if tbl_name in actual_tables and tbl_name not in allowed_tables:
-                        error_msg = f"Security Authorization Error: You are not authorized to query the dataset '{tbl_name}'."
-                        log_audit(user_id, "execute_read_only_sql (DENIED)", json.dumps({"query": query_str, "reason": error_msg}), step)
-                        return {"result": error_msg, "lineage": [lineage_record]}
+                    tbl_name = table.name.lower().strip()
+                    if tbl_name in actual_tables:
+                        # Case/Space/Underscore insensitive match:
+                        clean_tbl = re.sub(r'[^a-z0-9]', '', tbl_name).replace('and', '')
+                        is_allowed = any(
+                            re.sub(r'[^a-z0-9]', '', str(a).lower()).replace('and', '') == clean_tbl
+                            for a in allowed_tables
+                        )
+                        if not is_allowed:
+                            error_msg = f"Security Authorization Error: You are not authorized to query the dataset '{tbl_name}'."
+                            log_audit(user_id, "execute_read_only_sql (DENIED)", json.dumps({"query": query_str, "reason": error_msg}), step)
+                            return {"result": error_msg, "lineage": [lineage_record]}
     except sqlglot.errors.ParseError as e:
         # Let Postgres handle the syntax error instead of dying in sqlglot
         pass

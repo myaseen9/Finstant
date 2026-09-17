@@ -50,7 +50,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7C6FF0, #EC4899);
+  background: linear-gradient(135deg, #0EA5E9 0%, #22B8CF 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -60,7 +60,7 @@
   letter-spacing: 0.5px;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 }
 
 .userDetails {

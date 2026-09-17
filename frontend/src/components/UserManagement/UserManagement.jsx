@@ -1,10 +1,22 @@
 import { authenticatedFetch } from '../../api/auth';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { AppContext } from '@/pages/_app';
 import styles from './UserManagement.module.css';
 
+const formatAnalyticsDate = (raw) => {
+  if (!raw) return '—';
+  const str = String(raw).trim();
+  const parts = str.split('T')[0].split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${month}/${day}/${year}`;
+  }
+  return str;
+};
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,6 +38,51 @@ export default function UserManagement() {
   
   const [availableSheets, setAvailableSheets] = useState([]);
   const [savingAccess, setSavingAccess] = useState(false);
+
+  const [newUserSheets, setNewUserSheets] = useState([]);
+  const [isDataAccessDropdownOpen, setIsDataAccessDropdownOpen] = useState(false);
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [isDesignationDropdownOpen, setIsDesignationDropdownOpen] = useState(false);
+  const [dropdownPlacement, setDropdownPlacement] = useState('top');
+  const dataAccessTriggerRef = useRef(null);
+  const dataAccessWrapperRef = useRef(null);
+  const roleWrapperRef = useRef(null);
+  const designationWrapperRef = useRef(null);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dataAccessWrapperRef.current && !dataAccessWrapperRef.current.contains(e.target)) {
+        setIsDataAccessDropdownOpen(false);
+      }
+      if (roleWrapperRef.current && !roleWrapperRef.current.contains(e.target)) {
+        setIsRoleDropdownOpen(false);
+      }
+      if (designationWrapperRef.current && !designationWrapperRef.current.contains(e.target)) {
+        setIsDesignationDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleDataAccessDropdown = () => {
+    if (!isDataAccessDropdownOpen && dataAccessTriggerRef.current) {
+      const rect = dataAccessTriggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const neededHeight = 240;
+      // If space below is constrained and space above is sufficient, open upside
+      if (spaceBelow < neededHeight && spaceAbove >= 180) {
+        setDropdownPlacement('top');
+      } else if (spaceBelow >= neededHeight) {
+        setDropdownPlacement('bottom');
+      } else {
+        setDropdownPlacement('top');
+      }
+    }
+    setIsDataAccessDropdownOpen(!isDataAccessDropdownOpen);
+  };
 
   // New user form state
   const [formData, setFormData] = useState({
@@ -167,6 +224,8 @@ export default function UserManagement() {
       }
     } catch (err) {
       console.error('Failed to fetch users:', err);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -203,10 +262,15 @@ export default function UserManagement() {
     setError('');
 
     try {
+      const payload = {
+        ...formData,
+        sheets: formData.role === 'admin' ? [] : newUserSheets
+      };
+
       const res = await authenticatedFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       
       const data = await res.json();
@@ -218,6 +282,8 @@ export default function UserManagement() {
       // Success
       setIsModalOpen(false);
       setIsCustomDesignation(false);
+      setNewUserSheets([]);
+      setIsDataAccessDropdownOpen(false);
       setFormData({
         username: '',
         password: '',
@@ -422,76 +488,96 @@ export default function UserManagement() {
               </tr>
             </thead>
             <tbody>
-              {users.map(user => (
-                <tr key={user.id}>
-                  <td data-label="User">
-                    <div className={styles.userInfo}>
-                      <div className={styles.avatar}>
-                        {(() => {
-                          const raw = (user.name || user.first_name || user.username || 'U').trim();
-                          const parts = raw.split(/\s+/).filter(Boolean);
-                          return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
-                        })()}
+              {usersLoading ? (
+                [1, 2, 3, 4, 5].map((n) => (
+                  <tr key={`skeleton-${n}`} className={styles.skeletonRow}>
+                    <td>
+                      <div className={styles.userInfo}>
+                        <div className={styles.skeletonAvatar} />
+                        <div className={styles.userDetails} style={{ gap: 6 }}>
+                          <div className={styles.skeletonPulse} style={{ width: 130, height: 14 }} />
+                          <div className={styles.skeletonPulse} style={{ width: 85, height: 11 }} />
+                        </div>
                       </div>
-                      <div className={styles.userDetails}>
-                        <span className={styles.fullName}>
-                          {user.name || user.first_name || user.username}
-                        </span>
-                        <span className={styles.username}>{user.username}</span>
+                    </td>
+                    <td><div className={styles.skeletonPulse} style={{ width: 70, height: 22, borderRadius: 20 }} /></td>
+                    <td><div className={styles.skeletonPulse} style={{ width: 95, height: 14 }} /></td>
+                    <td><div className={styles.skeletonPulse} style={{ width: 60, height: 22, borderRadius: 20 }} /></td>
+                    <td><div className={styles.skeletonPulse} style={{ width: 110, height: 30, borderRadius: 6 }} /></td>
+                  </tr>
+                ))
+              ) : (
+                users.map((user, idx) => (
+                  <tr key={user.id} className={styles.animatedRow} style={{ animationDelay: `${idx * 45}ms` }}>
+                    <td data-label="User">
+                      <div className={styles.userInfo}>
+                        <div className={styles.avatar}>
+                          {(() => {
+                            const raw = (user.name || user.first_name || user.username || 'U').trim();
+                            const parts = raw.split(/\s+/).filter(Boolean);
+                            return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
+                          })()}
+                        </div>
+                        <div className={styles.userDetails}>
+                          <span className={styles.fullName}>
+                            {user.name || user.first_name || user.username}
+                          </span>
+                          <span className={styles.username}>{user.username}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td data-label="Role">
-                    <span className={`${styles.badge} ${
-                      user.role === 'superadmin' ? styles.badgeSuperadmin :
-                      user.role === 'admin' ? styles.badgeAdmin : styles.badgeUser
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td data-label="Designation">{user.designation || '—'}</td>
-                  <td data-label="Status">
-                    {user.role !== 'superadmin' && (
-                      <span className={`${styles.badge} ${user.is_active ? styles.statusActive : styles.statusInactive}`}>
-                        {user.is_active ? 'Active' : 'Inactive'}
+                    </td>
+                    <td data-label="Role">
+                      <span className={`${styles.badge} ${
+                        user.role === 'superadmin' ? styles.badgeSuperadmin :
+                        user.role === 'admin' ? styles.badgeAdmin : styles.badgeUser
+                      }`}>
+                        {user.role}
                       </span>
-                    )}
-                  </td>
-                  <td data-label="Actions">
-                    <div className={styles.actionButtons}>
-                      {currentUser?.id === user.id && (
-                        <button
-                          className={styles.btnEditProfile}
-                          onClick={() => {
-                            setProfileForm({ name: user.name || user.first_name || '' });
-                            setProfileEditOpen(true);
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                          Edit Profile
-                        </button>
+                    </td>
+                    <td data-label="Designation">{user.designation || '—'}</td>
+                    <td data-label="Status">
+                      {user.role !== 'superadmin' && (
+                        <span className={`${styles.badge} ${user.is_active ? styles.statusActive : styles.statusInactive}`}>
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       )}
-                      {canManage(user) && (
-                        <>
-                          <button 
-                            className={styles.toggleBtn}
-                            onClick={() => toggleUserStatus(user.id, user.is_active)}
+                    </td>
+                    <td data-label="Actions">
+                      <div className={styles.actionButtons}>
+                        {currentUser?.id === user.id && (
+                          <button
+                            className={styles.btnEditProfile}
+                            onClick={() => {
+                              setProfileForm({ name: user.name || user.first_name || '' });
+                              setProfileEditOpen(true);
+                            }}
                           >
-                            {user.is_active ? 'Deactivate' : 'Activate'}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Edit Profile
                           </button>
-                          <button 
-                            className={styles.moreOptionsBtn}
-                            onClick={(e) => handleToggleDropdown(e, user)}
-                          >
-                            More Options
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
+                        )}
+                        {canManage(user) && (
+                          <>
+                            <button 
+                              className={styles.toggleBtn}
+                              onClick={() => toggleUserStatus(user.id, user.is_active)}
+                            >
+                              {user.is_active ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button 
+                              className={styles.moreOptionsBtn}
+                              onClick={(e) => handleToggleDropdown(e, user)}
+                            >
+                              More Options
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+              {!usersLoading && users.length === 0 && (
                 <tr>
                   <td colSpan="5" className={styles.emptyState}>No users found.</td>
                 </tr>
@@ -503,80 +589,95 @@ export default function UserManagement() {
 
       {/* 2. Mobile Responsive User Cards (< 768px) */}
       <div className={styles.mobileCardsContainer}>
-        {users.map(user => (
-          <div key={`mobile-${user.id}`} className={styles.mobileUserCard}>
-            <div className={styles.cardHeaderRow}>
-              <div className={styles.userInfo}>
-                <div className={styles.avatar}>
-                  {(() => {
-                    const raw = (user.name || user.first_name || user.username || 'U').trim();
-                    const parts = raw.split(/\s+/).filter(Boolean);
-                    return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
-                  })()}
-                </div>
-                <div className={styles.userDetails}>
-                  <span className={styles.fullName}>
-                    {user.name || user.first_name || user.username}
-                  </span>
-                  <span className={styles.username}>{user.username}</span>
+        {usersLoading ? (
+          [1, 2, 3].map((n) => (
+            <div key={`mob-skeleton-${n}`} className={styles.mobileUserCard} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className={styles.skeletonAvatar} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                  <div className={styles.skeletonPulse} style={{ width: '50%', height: 14 }} />
+                  <div className={styles.skeletonPulse} style={{ width: '30%', height: 10 }} />
                 </div>
               </div>
-              <span className={`${styles.badge} ${
-                user.role === 'superadmin' ? styles.badgeSuperadmin :
-                user.role === 'admin' ? styles.badgeAdmin : styles.badgeUser
-              }`}>
-                {user.role}
-              </span>
+              <div className={styles.skeletonPulse} style={{ width: '75%', height: 12 }} />
             </div>
-
-            <div className={styles.cardDetailsRow}>
-              <div className={styles.cardMetaItem}>
-                <span className={styles.cardMetaLabel}>Designation</span>
-                <span className={styles.cardMetaVal}>{user.designation || '—'}</span>
+          ))
+        ) : (
+          users.map((user, idx) => (
+            <div key={`mobile-${user.id}`} className={`${styles.mobileUserCard} ${styles.animatedRow}`} style={{ animationDelay: `${idx * 45}ms` }}>
+              <div className={styles.cardHeaderRow}>
+                <div className={styles.userInfo}>
+                  <div className={styles.avatar}>
+                    {(() => {
+                      const raw = (user.name || user.first_name || user.username || 'U').trim();
+                      const parts = raw.split(/\s+/).filter(Boolean);
+                      return (parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : raw.slice(0, 2)).toUpperCase();
+                    })()}
+                  </div>
+                  <div className={styles.userDetails}>
+                    <span className={styles.fullName}>
+                      {user.name || user.first_name || user.username}
+                    </span>
+                    <span className={styles.username}>{user.username}</span>
+                  </div>
+                </div>
+                <span className={`${styles.badge} ${
+                  user.role === 'superadmin' ? styles.badgeSuperadmin :
+                  user.role === 'admin' ? styles.badgeAdmin : styles.badgeUser
+                }`}>
+                  {user.role}
+                </span>
               </div>
-              {user.role !== 'superadmin' && (
+
+              <div className={styles.cardDetailsRow}>
                 <div className={styles.cardMetaItem}>
-                  <span className={styles.cardMetaLabel}>Status</span>
-                  <span className={`${styles.badge} ${user.is_active ? styles.statusActive : styles.statusInactive}`}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  <span className={styles.cardMetaLabel}>Designation</span>
+                  <span className={styles.cardMetaVal}>{user.designation || '—'}</span>
                 </div>
-              )}
-            </div>
+                {user.role !== 'superadmin' && (
+                  <div className={styles.cardMetaItem}>
+                    <span className={styles.cardMetaLabel}>Status</span>
+                    <span className={`${styles.badge} ${user.is_active ? styles.statusActive : styles.statusInactive}`}>
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            <div className={styles.cardActionsRow}>
-              {currentUser?.id === user.id && (
-                <button
-                  className={styles.btnEditProfile}
-                  onClick={() => {
-                    setProfileForm({ name: user.name || user.first_name || '' });
-                    setProfileEditOpen(true);
-                  }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                  Edit Profile
-                </button>
-              )}
-              {canManage(user) && (
-                <>
-                  <button 
-                    className={styles.toggleBtn}
-                    onClick={() => toggleUserStatus(user.id, user.is_active)}
+              <div className={styles.cardActionsRow}>
+                {currentUser?.id === user.id && (
+                  <button
+                    className={styles.btnEditProfile}
+                    onClick={() => {
+                      setProfileForm({ name: user.name || user.first_name || '' });
+                      setProfileEditOpen(true);
+                    }}
                   >
-                    {user.is_active ? 'Deactivate' : 'Activate'}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Edit Profile
                   </button>
-                  <button 
-                    className={styles.moreOptionsBtn}
-                    onClick={(e) => handleToggleDropdown(e, user)}
-                  >
-                    More Options
-                  </button>
-                </>
-              )}
+                )}
+                {canManage(user) && (
+                  <>
+                    <button 
+                      className={styles.toggleBtn}
+                      onClick={() => toggleUserStatus(user.id, user.is_active)}
+                    >
+                      {user.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button 
+                      className={styles.moreOptionsBtn}
+                      onClick={(e) => handleToggleDropdown(e, user)}
+                    >
+                      More Options
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        {users.length === 0 && (
+          ))
+        )}
+        {!usersLoading && users.length === 0 && (
           <div className={styles.emptyState}>No users found.</div>
         )}
       </div>
@@ -680,33 +781,120 @@ export default function UserManagement() {
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label>Role</label>
-                  <select 
-                    name="role" 
-                    className={styles.input}
-                    value={formData.role}
-                    onChange={handleInputChange}
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <div className={styles.customSelectWrapper} ref={roleWrapperRef}>
+                    <button
+                      type="button"
+                      className={styles.customSelectBtn}
+                      onClick={() => {
+                        setIsRoleDropdownOpen(!isRoleDropdownOpen);
+                        setIsDesignationDropdownOpen(false);
+                        setIsDataAccessDropdownOpen(false);
+                      }}
+                    >
+                      <span>{formData.role === 'admin' ? 'Admin' : 'User'}</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    {isRoleDropdownOpen && (
+                      <div className={styles.customSelectMenu}>
+                        <button
+                          type="button"
+                          className={`${styles.customOptionItem} ${formData.role === 'user' ? styles.customOptionItemActive : ''}`}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, role: 'user' }));
+                            setIsRoleDropdownOpen(false);
+                          }}
+                        >
+                          <span>User</span>
+                          {formData.role === 'user' && <span style={{ color: 'var(--accent)' }}>✓</span>}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.customOptionItem} ${formData.role === 'admin' ? styles.customOptionItemActive : ''}`}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, role: 'admin' }));
+                            setIsRoleDropdownOpen(false);
+                          }}
+                        >
+                          <span>Admin</span>
+                          {formData.role === 'admin' && <span style={{ color: 'var(--accent)' }}>✓</span>}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 <div className={styles.formGroup}>
                   <label>Designation</label>
                   {!isCustomDesignation ? (
-                    <select 
-                      name="designation_select" 
-                      className={styles.input}
-                      value={formData.designation}
-                      onChange={handleInputChange}
-                    >
-                      <option value="HR">HR</option>
-                      <option value="Accountant">Accountant</option>
-                      <option value="Finance Manager">Finance Manager</option>
-                      <option value="Executive">Executive</option>
-                      <option value="CEO">CEO</option>
-                      <option value="Analyst">Analyst</option>
-                      <option value="Custom" style={{ fontWeight: 'bold' }}>+ Create Custom...</option>
-                    </select>
+                    <div className={styles.customSelectWrapper} ref={designationWrapperRef}>
+                      <button
+                        type="button"
+                        className={styles.customSelectBtn}
+                        onClick={() => {
+                          setIsDesignationDropdownOpen(!isDesignationDropdownOpen);
+                          setIsRoleDropdownOpen(false);
+                          setIsDataAccessDropdownOpen(false);
+                        }}
+                      >
+                        <span>{formData.designation || 'Select designation...'}</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{ transform: isDesignationDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', flexShrink: 0 }}
+                        >
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </button>
+                      {isDesignationDropdownOpen && (
+                        <div className={styles.customSelectMenu}>
+                          {['HR', 'Accountant', 'Finance Manager', 'Executive', 'CEO', 'Analyst'].map(des => (
+                            <button
+                              key={des}
+                              type="button"
+                              className={`${styles.customOptionItem} ${formData.designation === des ? styles.customOptionItemActive : ''}`}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, designation: des }));
+                                setIsDesignationDropdownOpen(false);
+                              }}
+                            >
+                              <span>{des}</span>
+                              {formData.designation === des && <span style={{ color: 'var(--accent)' }}>✓</span>}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className={`${styles.customOptionItem} ${styles.customOptionCreate}`}
+                            onClick={() => {
+                              setIsCustomDesignation(true);
+                              setFormData(prev => ({ ...prev, designation: '' }));
+                              setIsDesignationDropdownOpen(false);
+                            }}
+                          >
+                            <span>+ Create Custom...</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <input 
@@ -732,6 +920,108 @@ export default function UserManagement() {
                 </div>
               </div>
 
+              {/* Data Access (Permissions) Dropdown */}
+              <div className={styles.formGroup} style={{ position: 'relative' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Data Access (Permissions)</span>
+                  {formData.role === 'user' && newUserSheets.length > 0 && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent, #22B8CF)', fontWeight: 600 }}>
+                      {newUserSheets.length} sheet{newUserSheets.length > 1 ? 's' : ''} selected
+                    </span>
+                  )}
+                </label>
+
+                {formData.role === 'admin' ? (
+                  <div className={styles.adminAccessNotice}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Admin role has full access to all datasets</span>
+                  </div>
+                ) : (
+                  <div className={styles.dataAccessWrapper} ref={dataAccessWrapperRef}>
+                    <button 
+                      type="button" 
+                      ref={dataAccessTriggerRef}
+                      className={styles.dataAccessTriggerBtn}
+                      onClick={toggleDataAccessDropdown}
+                    >
+                      <span className={styles.dataAccessTriggerText}>
+                        {newUserSheets.length === 0 
+                          ? 'Select accessible sheets...' 
+                          : `${newUserSheets.length} sheet${newUserSheets.length > 1 ? 's' : ''} selected (${newUserSheets.map(s => {
+                              const match = availableSheets.find(item => (item.id || item.name) === s);
+                              return match?.name || s;
+                            }).join(', ')})`}
+                      </span>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="15" 
+                        height="15" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        style={{ 
+                          transform: isDataAccessDropdownOpen 
+                            ? (dropdownPlacement === 'top' ? 'rotate(0deg)' : 'rotate(180deg)')
+                            : (dropdownPlacement === 'top' ? 'rotate(180deg)' : 'rotate(0deg)'), 
+                          transition: 'transform 0.2s ease', 
+                          flexShrink: 0 
+                        }}
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+
+                    {isDataAccessDropdownOpen && (
+                      <div className={`${styles.dataAccessDropdownMenu} ${dropdownPlacement === 'top' ? styles.dropdownPlacementTop : styles.dropdownPlacementBottom}`}>
+                        <div className={styles.dropdownActionRow}>
+                          <button 
+                            type="button" 
+                            className={styles.quickSelectBtn}
+                            onClick={() => setNewUserSheets(availableSheets.map(s => s.id || s.name))}
+                          >
+                            Select All
+                          </button>
+                          <button 
+                            type="button" 
+                            className={styles.quickSelectBtn}
+                            onClick={() => setNewUserSheets([])}
+                          >
+                            Clear All
+                          </button>
+                        </div>
+
+                        <div className={styles.sheetsCheckboxList}>
+                          {availableSheets.map(sheet => {
+                            const sheetKey = sheet.id || sheet.name;
+                            const isChecked = newUserSheets.includes(sheetKey);
+                            return (
+                              <label key={sheetKey} className={styles.sheetCheckboxLabel}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      setNewUserSheets(prev => prev.filter(s => s !== sheetKey));
+                                    } else {
+                                      setNewUserSheets(prev => [...prev, sheetKey]);
+                                    }
+                                  }}
+                                  className={styles.sheetCheckbox}
+                                />
+                                <span className={styles.sheetTitleText}>{sheet.name || sheetKey}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className={styles.modalActions}>
                 <button type="button" className={styles.btnCancel} onClick={() => setIsModalOpen(false)}>
                   Cancel
@@ -745,54 +1035,95 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Access Control Modal Mockup */}
+      {/* Access Control Modal */}
       {accessModalUser && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modal} style={{ maxWidth: '600px' }}>
+          <div className={styles.modal} style={{ maxWidth: '620px' }}>
             <div className={styles.modalHeader}>
               <div>
-                <h3>Access Control</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <h3 style={{ margin: 0 }}>Access Control</h3>
+                  <span className={styles.grantedCountPill}>
+                    {selectedSheets.length} of {availableSheets.length} Datasets Granted
+                  </span>
+                </div>
                 <p className={styles.modalSubtitle}>
-                  Managing permissions for <strong>{accessModalUser.first_name} {accessModalUser.last_name}</strong> ({accessModalUser.designation})
+                  Managing dataset permissions for <strong>{accessModalUser.name || accessModalUser.first_name || accessModalUser.username}</strong> ({accessModalUser.designation || 'User'})
                 </p>
               </div>
               <button className={styles.closeBtn} onClick={() => setAccessModalUser(null)}>×</button>
             </div>
             
             <div className={styles.sheetList}>
-              <div className={styles.sheetListHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Dataset / Sheet Name</span>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', userSelect: 'none', fontSize: '0.82rem', fontWeight: 600 }}>
-                  <span>Select All</span>
-                  <input 
-                    type="checkbox" 
-                    className={styles.checkbox}
-                    checked={availableSheets.length > 0 && selectedSheets.length === availableSheets.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSheets(availableSheets.map(s => s.id));
-                      } else {
-                        setSelectedSheets([]);
-                      }
-                    }}
-                  />
-                </label>
+              <div className={styles.sheetListHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                  <span>Financial Datasets / Sheets</span>
+                </div>
+                <button 
+                  type="button"
+                  className={styles.quickToggleBtn}
+                  onClick={() => {
+                    if (selectedSheets.length === availableSheets.length) {
+                      setSelectedSheets([]);
+                    } else {
+                      setSelectedSheets(availableSheets.map(s => s.id));
+                    }
+                  }}
+                >
+                  {selectedSheets.length === availableSheets.length ? 'Deselect All' : 'Select All'}
+                </button>
               </div>
               <div className={styles.sheetItemsContainer}>
-                {availableSheets.map(sheet => (
-                  <label key={sheet.id} className={styles.sheetItem}>
-                    <div className={styles.sheetItemName}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: 'var(--color-primary)'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      {sheet.name}
+                {availableSheets.map(sheet => {
+                  const isGranted = selectedSheets.includes(sheet.id);
+                  return (
+                    <div 
+                      key={sheet.id} 
+                      className={`${styles.sheetItem} ${isGranted ? styles.sheetItemGranted : styles.sheetItemRestricted}`}
+                      onClick={() => handleSheetToggle(sheet.id)}
+                    >
+                      <div className={styles.sheetItemName}>
+                        <div className={`${styles.sheetItemIcon} ${isGranted ? styles.iconGranted : styles.iconRestricted}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        </div>
+                        <div>
+                          <div className={styles.sheetTitle}>{sheet.name}</div>
+                          <div className={styles.sheetTableKey}>Dataset key: {sheet.id}</div>
+                        </div>
+                      </div>
+                      
+                      <div className={styles.sheetItemStatus}>
+                        <span className={`${styles.accessBadge} ${isGranted ? styles.accessGranted : styles.accessRestricted}`}>
+                          {isGranted ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              Granted
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              Restricted
+                            </>
+                          )}
+                        </span>
+                        <input 
+                          type="checkbox" 
+                          className={styles.checkbox}
+                          checked={isGranted}
+                          onChange={() => {}} 
+                          onClick={(e) => e.stopPropagation()}
+                          readOnly
+                        />
+                      </div>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      className={styles.checkbox}
-                      checked={selectedSheets.includes(sheet.id)}
-                      onChange={() => handleSheetToggle(sheet.id)}
-                    />
-                  </label>
-                ))}
+                  );
+                })}
+                {availableSheets.length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    No dataset tables found in the knowledge base.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -803,11 +1134,10 @@ export default function UserManagement() {
               <button 
                 type="button" 
                 className={styles.btnRevoke} 
-                onClick={() => {
-                  setSelectedSheets([]);
-                }}
+                onClick={() => setSelectedSheets([])}
+                disabled={selectedSheets.length === 0}
               >
-                Clear Selections
+                Clear All
               </button>
               <button 
                 type="button" 
@@ -815,7 +1145,7 @@ export default function UserManagement() {
                 onClick={saveUserAccess}
                 disabled={savingAccess}
               >
-                {savingAccess ? 'Saving...' : 'Grant Access'}
+                {savingAccess ? 'Saving...' : 'Save Permissions'}
               </button>
             </div>
           </div>
@@ -891,7 +1221,7 @@ export default function UserManagement() {
                     <tbody>
                       {analyticsData.map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #1f2937' }}>
-                          <td style={{ padding: '1rem' }}>{row.date}</td>
+                          <td style={{ padding: '1rem' }}>{formatAnalyticsDate(row.date)}</td>
                           <td style={{ padding: '1rem', fontWeight: 'bold' }}>{row.total}</td>
                           <td style={{ padding: '1rem' }}>{row.lookups}</td>
                           <td style={{ padding: '1rem' }}>{row.aggregations}</td>

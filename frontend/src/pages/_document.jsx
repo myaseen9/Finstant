@@ -21,8 +21,10 @@ const THEME_BOOTSTRAP = `
 (function () {
   try {
     var KEY = 'finstant-theme';
+    var FONT_KEY = 'finstant-font';
     var LEGACY = ['finance_engine_theme', 'finstant_theme'];
     var mode = localStorage.getItem(KEY);
+    var font = localStorage.getItem(FONT_KEY) || 'roboto';
 
     if (!mode) {
       for (var i = 0; i < LEGACY.length; i++) {
@@ -35,11 +37,10 @@ const THEME_BOOTSTRAP = `
 
     if (mode !== 'light' && mode !== 'dark') mode = 'light';
 
-    var resolved = mode;
-
     var root = document.documentElement;
-    root.setAttribute('data-theme', resolved);
+    root.setAttribute('data-theme', mode);
     root.setAttribute('data-theme-mode', mode);
+    root.setAttribute('data-font', font);
   } catch (e) {
     /* Leave the SSR default in place. */
   }
@@ -50,12 +51,10 @@ export default function FinstantDocument() {
   return (
     <Html
       lang="en"
-      /* Font variables mount here so `body { font-family: var(--font-body) }`
-         in base.css can see them. */
       className={fontVariables}
-      /* SSR default matches themes.css, where :root is Finstant Light. */
       data-theme="light"
       data-theme-mode="light"
+      data-font="roboto"
       suppressHydrationWarning
     >
       <Head>
@@ -67,7 +66,7 @@ export default function FinstantDocument() {
         <meta name="format-detection" content="telephone=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </Head>
       <body>

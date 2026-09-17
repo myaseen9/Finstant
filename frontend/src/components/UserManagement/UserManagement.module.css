@@ -128,8 +128,8 @@
 .avatar {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #7C6FF0, #EC4899);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0EA5E9 0%, #22B8CF 100%);
   color: #FFFFFF;
   display: flex;
   align-items: center;
@@ -137,6 +137,7 @@
   font-weight: 700;
   font-size: 0.95rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 }
 
 .userDetails {
@@ -306,6 +307,224 @@
   border-color: var(--color-primary);
 }
 
+/* Minimal Data Access Dropdown in Create User Modal */
+.dataAccessWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.dataAccessTriggerBtn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-input-text);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.dataAccessTriggerBtn:hover {
+  border-color: var(--color-text-muted);
+}
+
+.dataAccessTriggerText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 0.5rem;
+  font-size: 0.88rem;
+}
+
+/* Custom Select Dropdowns (matching Data Access design) */
+.customSelectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.customSelectBtn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-input-text);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: inherit;
+}
+
+.customSelectBtn:hover,
+.customSelectBtn:focus {
+  border-color: var(--color-text-muted);
+  outline: none;
+}
+
+.customSelectMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  padding: 0.4rem;
+  z-index: 120;
+  max-height: 220px;
+  overflow-y: auto;
+  backdrop-filter: blur(16px);
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.customOptionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.customOptionItem:hover {
+  background-color: var(--color-hover);
+}
+
+.customOptionItemActive {
+  background-color: rgba(34, 184, 207, 0.12) !important;
+  color: var(--accent, #22B8CF) !important;
+  font-weight: 600;
+}
+
+.customOptionCreate {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+  padding-top: 0.6rem;
+  color: var(--accent, #22B8CF);
+  font-weight: 600;
+}
+
+.dataAccessDropdownMenu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  z-index: 100;
+  max-height: 220px;
+  overflow-y: auto;
+  backdrop-filter: blur(16px);
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdownPlacementBottom {
+  top: calc(100% + 6px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+}
+
+.dropdownPlacementTop {
+  bottom: calc(100% + 6px);
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.dropdownActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.quickSelectBtn {
+  background: transparent;
+  border: none;
+  color: var(--accent, #22B8CF);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.quickSelectBtn:hover {
+  background: rgba(34, 184, 207, 0.1);
+}
+
+.sheetsCheckboxList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sheetCheckboxLabel {
+  display: flex !important;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem !important;
+  color: var(--color-text) !important;
+  transition: background 0.15s ease;
+  margin-bottom: 0 !important;
+}
+
+.sheetCheckboxLabel:hover {
+  background: var(--color-hover);
+}
+
+.sheetCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent, #22B8CF);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sheetTitleText {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.adminAccessNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(34, 184, 207, 0.08);
+  border: 1px solid rgba(34, 184, 207, 0.25);
+  color: var(--accent, #22B8CF);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 .modalActions {
   display: flex;
   gap: 1rem;
@@ -329,24 +548,25 @@
 }
 
 .btnSubmit {
-  background-color: var(--color-primary);
-  color: white;
+  background-color: var(--action);
+  color: var(--action-text);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 9999px; /* Pill */
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px 0 rgba(16, 163, 127, 0.39);
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15);
 }
 
 .btnSubmit:hover {
+  background-color: var(--action-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(16, 163, 127, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .btnSubmit:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
@@ -393,19 +613,30 @@
   font-size: 0.9rem;
 }
 
+.grantedCountPill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
 .sheetList {
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   margin-top: 1.5rem;
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--color-surface);
 }
 
 .sheetListHeader {
   display: flex;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background-color: rgba(255, 255, 255, 0.03);
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  background-color: var(--surface-hover);
   border-bottom: 1px solid var(--color-border);
   font-weight: 600;
   font-size: 0.8rem;
@@ -414,8 +645,25 @@
   letter-spacing: 0.5px;
 }
 
+.quickToggleBtn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quickToggleBtn:hover {
+  background: var(--color-hover);
+  border-color: var(--color-text-muted);
+}
+
 .sheetItemsContainer {
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -423,27 +671,101 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
 .sheetItem:last-child {
   border-bottom: none;
 }
 
-.sheetItem:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+.sheetItemGranted {
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.sheetItemRestricted {
+  background: transparent;
+}
+
+.sheetItemGranted:hover {
+  background: rgba(16, 185, 129, 0.09);
+}
+
+.sheetItemRestricted:hover {
+  background: var(--surface-hover);
 }
 
 .sheetItemName {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-  color: var(--color-text);
+  gap: 0.85rem;
+}
+
+.sheetItemIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.iconGranted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.iconRestricted {
+  background: rgba(156, 163, 175, 0.12);
+  color: #9ca3af;
+}
+
+.sheetTitle {
+  font-size: 0.92rem;
   font-weight: 500;
+  color: var(--color-text);
+}
+
+.sheetTableKey {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+  margin-top: 0.1rem;
+}
+
+.sheetItemStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.accessBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+.accessGranted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.accessRestricted {
+  background: rgba(156, 163, 175, 0.1);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.2);
 }
 
 .checkbox {
@@ -464,8 +786,13 @@
   transition: all 0.2s;
 }
 
-.btnRevoke:hover {
+.btnRevoke:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.1);
+}
+
+.btnRevoke:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Dropdown Styles */
@@ -729,5 +1056,66 @@
   }
   .btnRevoke {
     width: 100%;
+  }
+}
+
+/* Row & Card Entrance Animation */
+.animatedRow {
+  animation: userRowFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes userRowFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton Loading Shimmer */
+.skeletonAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-border);
+  position: relative;
+  overflow: hidden;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.skeletonPulse {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-border);
+  border-radius: 6px;
+  opacity: 0.65;
+}
+
+.skeletonAvatar::after,
+.skeletonPulse::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.12) 20%,
+    rgba(255, 255, 255, 0.28) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: userShimmer 1.6s infinite;
+}
+
+@keyframes userShimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

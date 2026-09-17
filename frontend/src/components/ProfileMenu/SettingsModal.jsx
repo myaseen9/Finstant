@@ -1,12 +1,14 @@
 import { authenticatedFetch } from '../../api/auth';
 import { useState, useContext, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './SettingsModal.module.css';
 import { AppContext } from '@/pages/_app';
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { user, setUser, showHUD } = useContext(AppContext);
+  const { user, setUser, showHUD, font, setFont, fontOptions, themeMode, setThemeMode } = useContext(AppContext);
+  const [mounted, setMounted] = useState(false);
   
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'security'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'appearance', or 'security'
 
   // Profile Form State
   const [name, setName] = useState('');
@@ -19,6 +21,10 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [passwordStatus, setPasswordStatus] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Sync state when modal opens or user changes
   useEffect(() => {
     if (user && isOpen) {
@@ -30,7 +36,34 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   }, [user, isOpen]);
 
-  if (!isOpen) return null;
+  // Handle Escape key to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !mounted) return null;
+
+  const handleFontChange = (newFontId) => {
+    if (setFont) {
+      setFont(newFontId);
+      const selected = fontOptions?.find(f => f.id === newFontId);
+      if (showHUD) {
+        showHUD({
+          title: 'Typography Updated',
+          subtitle: `Switched font to ${selected?.name || newFontId}`,
+          type: 'success'
+        });
+      }
+    }
+  };
 
   // Handle Profile (Name) Update
   const handleProfileUpdate = async (e) => {
@@ -87,7 +120,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         setTimeout(() => {
           setProfileStatus('');
           onClose();
-        }, 1200);
+        }, 450);
       } else {
         const errMsg = data.detail || data.error || 'Failed to update profile';
         setProfileStatus('Error: ' + errMsg);
@@ -164,7 +197,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         setTimeout(() => {
           setPasswordStatus('');
           onClose();
-        }, 1200);
+        }, 450);
       } else {
         const errMsg = data.error || data.detail || 'Current password incorrect';
         setPasswordStatus('Error: ' + errMsg);
@@ -190,7 +223,13 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
-  return (
+  const getHeaderTitle = () => {
+    if (activeTab === 'profile') return 'Profile Settings';
+    if (activeTab === 'appearance') return 'Appearance & Typography';
+    return 'Security Settings';
+  };
+
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         {/* Modal Sidebar */}
@@ -205,6 +244,14 @@ export default function SettingsModal({ isOpen, onClose }) {
             Profile
           </button>
           <button 
+            className={`${styles.tabBtn} ${activeTab === 'appearance' ? styles.active : ''}`}
+            onClick={() => setActiveTab('appearance')}
+            type="button"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            Appearance
+          </button>
+          <button 
             className={`${styles.tabBtn} ${activeTab === 'security' ? styles.active : ''}`}
             onClick={() => setActiveTab('security')}
             type="button"
@@ -217,12 +264,12 @@ export default function SettingsModal({ isOpen, onClose }) {
         {/* Modal Main Content */}
         <div className={styles.content}>
           <div className={styles.contentHeader}>
-            <h3>{activeTab === 'profile' ? 'Profile Settings' : 'Security Settings'}</h3>
-            <button className={styles.closeBtn} onClick={onClose}>&times;</button>
+            <h3>{getHeaderTitle()}</h3>
+            <button className={styles.closeBtn} onClick={onClose} aria-label="Close settings">&times;</button>
           </div>
 
           <div className={styles.contentBody}>
-            {activeTab === 'profile' ? (
+            {activeTab === 'profile' && (
               <form className={styles.section} onSubmit={handleProfileUpdate}>
                 <div className={styles.infoCard}>
                   <div className={styles.infoRow}>
@@ -258,7 +305,97 @@ export default function SettingsModal({ isOpen, onClose }) {
                   {profileLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
-            ) : (
+            )}
+
+            {activeTab === 'appearance' && (
+              <div className={styles.appearanceSection}>
+                <div className={styles.appearanceGroup}>
+                  <label className={styles.groupHeading}>Typography Style</label>
+                  <p className={styles.groupSubtext}>Select your preferred reading and interface typeface. Roboto is the system default.</p>
+
+                  <div className={styles.fontGrid}>
+                    {(fontOptions || [
+                      { id: 'roboto', name: 'Roboto', badge: 'Default', description: 'Clean, modern standard financial UI typeface.' },
+                      { id: 'anthropic-sans', name: 'Anthropic Sans', badge: 'Plus Jakarta / Inter', description: 'Modern neo-grotesque sans-serif with crisp legibility.' },
+                      { id: 'anthropic-serif', name: 'Anthropic Serif', badge: 'Lora / Charter', description: 'Refined editorial serif styling inspired by Claude & publications.' }
+                    ]).map((fOpt) => {
+                      const isSelected = (font || 'roboto') === fOpt.id;
+                      return (
+                        <div
+                          key={fOpt.id}
+                          className={`${styles.fontCard} ${isSelected ? styles.fontCardSelected : ''}`}
+                          onClick={() => handleFontChange(fOpt.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleFontChange(fOpt.id); }}
+                        >
+                          <div className={styles.fontCardHeader}>
+                            <div className={styles.fontRadio}>
+                              <div className={`${styles.radioDot} ${isSelected ? styles.radioDotActive : ''}`} />
+                            </div>
+                            <div className={styles.fontTitleWrap}>
+                              <span className={styles.fontName}>{fOpt.name}</span>
+                              <span className={styles.fontBadge}>{fOpt.badge}</span>
+                            </div>
+                          </div>
+                          <p className={styles.fontDesc}>{fOpt.description}</p>
+                          <div
+                            className={styles.fontSample}
+                            style={{
+                              fontFamily: fOpt.id === 'roboto'
+                                ? 'var(--font-roboto, Roboto, sans-serif)'
+                                : fOpt.id === 'anthropic-sans'
+                                ? 'var(--font-anthropic-sans, Plus Jakarta Sans, sans-serif)'
+                                : 'var(--font-anthropic-serif, Lora, serif)'
+                            }}
+                          >
+                            Aa Bb Gg 123 · Financial Analysis
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={styles.appearanceGroup}>
+                  <label className={styles.groupHeading}>Live Typography Preview</label>
+                  <div 
+                    className={styles.livePreviewCard}
+                    style={{
+                      fontFamily: (font === 'roboto')
+                        ? "'Roboto', sans-serif"
+                        : (font === 'anthropic-sans')
+                        ? "'Plus Jakarta Sans', 'Inter', sans-serif"
+                        : "'Lora', 'Charter', serif"
+                    }}
+                  >
+                    <div className={styles.livePreviewHeader}>
+                      <h4 style={{ fontFamily: 'inherit' }}>FINANCIAL PERFORMANCE BRIEF</h4>
+                      <span className={styles.previewTag}>ACTIVE PREVIEW</span>
+                    </div>
+                    <div className={styles.liveMetrics}>
+                      <div className={styles.liveMetricItem}>
+                        <span className={styles.metricLabel} style={{ fontFamily: 'inherit' }}>Q3 Revenue</span>
+                        <span className={styles.metricValue} style={{ fontFamily: 'inherit' }}>PKR 42.8M</span>
+                      </div>
+                      <div className={styles.liveMetricItem}>
+                        <span className={styles.metricLabel} style={{ fontFamily: 'inherit' }}>YoY Growth</span>
+                        <span className={`${styles.metricValue} ${styles.metricPositive}`} style={{ fontFamily: 'inherit' }}>+18.4%</span>
+                      </div>
+                      <div className={styles.liveMetricItem}>
+                        <span className={styles.metricLabel} style={{ fontFamily: 'inherit' }}>Operating Margin</span>
+                        <span className={styles.metricValue} style={{ fontFamily: 'inherit' }}>24.6%</span>
+                      </div>
+                    </div>
+                    <p className={styles.previewBody} style={{ fontFamily: 'inherit' }}>
+                      Finstant automatically queries, cross-references, and analyzes your authorized enterprise financial models, payroll sheets, and KPI data with deterministic precision.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
               <form className={styles.section} onSubmit={handlePasswordUpdate}>
                 <div className={styles.inputGroup}>
                   <label>Current Password</label>
@@ -296,7 +433,8 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

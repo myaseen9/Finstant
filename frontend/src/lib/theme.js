@@ -19,7 +19,7 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 const SSR_THEME = 'light';
 const SSR_MODE = 'light';
 
-const FALLBACK_TRANSITION_MS = 420;
+const FALLBACK_TRANSITION_MS = 250;
 
 function prefersDark() {
   return (
@@ -149,3 +149,61 @@ export function useThemeMode() {
 
   return { theme, themeMode: mode, setThemeMode, toggleTheme };
 }
+
+export const FONT_STORAGE_KEY = 'finstant-font';
+
+export const FONT_OPTIONS = [
+  {
+    id: 'roboto',
+    name: 'Roboto',
+    badge: 'Default',
+    description: 'Clean, modern standard financial UI typeface.',
+    previewFont: 'var(--font-roboto, Roboto, sans-serif)',
+  },
+  {
+    id: 'anthropic-sans',
+    name: 'Anthropic Sans',
+    badge: 'Plus Jakarta / Inter',
+    description: 'Modern neo-grotesque sans-serif with crisp legibility.',
+    previewFont: 'var(--font-anthropic-sans, Plus Jakarta Sans, Inter, sans-serif)',
+  },
+  {
+    id: 'anthropic-serif',
+    name: 'Anthropic Serif',
+    badge: 'Lora / Charter',
+    description: 'Refined editorial serif styling inspired by Claude & publications.',
+    previewFont: 'var(--font-anthropic-serif, Lora, serif)',
+  },
+];
+
+export function useFontMode() {
+  const [font, setFontState] = useState('roboto');
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(FONT_STORAGE_KEY);
+      if (stored && ['roboto', 'anthropic-sans', 'anthropic-serif'].includes(stored)) {
+        setFontState(stored);
+        document.documentElement.setAttribute('data-font', stored);
+      } else {
+        document.documentElement.setAttribute('data-font', 'roboto');
+      }
+    } catch {
+      /* private mode */
+    }
+  }, []);
+
+  const setFont = useCallback((nextFont) => {
+    if (!['roboto', 'anthropic-sans', 'anthropic-serif'].includes(nextFont)) return;
+    setFontState(nextFont);
+    try {
+      localStorage.setItem(FONT_STORAGE_KEY, nextFont);
+      document.documentElement.setAttribute('data-font', nextFont);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  return { font, setFont, fontOptions: FONT_OPTIONS };
+}
+
