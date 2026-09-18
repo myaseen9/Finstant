@@ -14,9 +14,16 @@ export default function AdminPanel() {
   const [showLiveFilesModal, setShowLiveFilesModal] = useState(false);
   const [liveFilesData, setLiveFilesData] = useState(null);
   const [loadingLiveFiles, setLoadingLiveFiles] = useState(false);
+  const [activeFileMenu, setActiveFileMenu] = useState(null);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [deletingFile, setDeletingFile] = useState(false);
+  const [targetReplaceFilename, setTargetReplaceFilename] = useState(null);
+  const [pendingReplaceFile, setPendingReplaceFile] = useState(null);
   const [downloadingMaster, setDownloadingMaster] = useState(false);
   const [masterDownloaded, setMasterDownloaded] = useState(false);
   const fileInputRef = useRef(null);
+  const replaceFileInputRef = useRef(null);
+  const targetReplaceFileRef = useRef(null);
   const masterMenuRef = useRef(null);
   const masterTimerRef = useRef(null);
 
@@ -25,12 +32,13 @@ export default function AdminPanel() {
       if (masterMenuRef.current && !masterMenuRef.current.contains(e.target)) {
         setShowMasterMenu(false);
       }
+      if (!e.target.closest(`.${styles.liveFileActions}`)) {
+        setActiveFileMenu(null);
+      }
     };
-    if (showMasterMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMasterMenu]);
+  }, []);
 
   const fetchHistory = () => {
     authenticatedFetch('/uploads')
@@ -41,10 +49,10 @@ export default function AdminPanel() {
       .catch(err => console.error("Failed to fetch upload history:", err));
   };
 
-  const fetchLiveFiles = async () => {
+  const fetchLiveFiles = async (showModal = true) => {
     setShowMasterMenu(false);
     setLoadingLiveFiles(true);
-    setShowLiveFilesModal(true);
+    if (showModal) setShowLiveFilesModal(true);
     try {
       const res = await authenticatedFetch('/live-files');
       if (res.ok) {
@@ -58,11 +66,87 @@ export default function AdminPanel() {
     }
   };
 
+  const handleTriggerReplace = (filename) => {
+    targetReplaceFileRef.current = filename;
+    setTargetReplaceFilename(filename);
+    setTimeout(() => {
+      if (replaceFileInputRef.current) {
+        replaceFileInputRef.current.value = null;
+        replaceFileInputRef.current.click();
+      }
+    }, 50);
+  };
+
+  const handleReplaceFileSelected = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx')) {
+      if (showHUD) {
+        showHUD({ title: 'Invalid File', subtitle: 'Only .xlsx files are supported.', type: 'error' });
+      }
+      return;
+    }
+
+    const targetName = targetReplaceFileRef.current || targetReplaceFilename;
+    setPendingReplaceFile({
+      targetFilename: targetName,
+      newFile: file
+    });
+  };
+
+  const confirmReplaceLiveFile = () => {
+    if (!pendingReplaceFile) return;
+    const { newFile, targetFilename } = pendingReplaceFile;
+    setPendingReplaceFile(null);
+    setShowLiveFilesModal(false);
+    processUpload(newFile, targetFilename);
+  };
+
+  const confirmDeleteLiveFile = async (filename) => {
+    setDeletingFile(true);
+    try {
+      const res = await authenticatedFetch(`/delete-live-file?filename=${encodeURIComponent(filename)}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        if (showHUD) {
+          showHUD({
+            title: 'File Data Deleted',
+            subtitle: `Data for "${filename}" removed from database`,
+            type: 'success'
+          });
+        }
+        await fetchLiveFiles(false);
+        fetchHistory();
+      } else {
+        if (showHUD) {
+          showHUD({
+            title: 'Delete Failed',
+            subtitle: data.error || data.detail || 'Could not delete file records',
+            type: 'error'
+          });
+        }
+      }
+    } catch (err) {
+      if (showHUD) {
+        showHUD({
+          title: 'Error',
+          subtitle: err.message || 'Network error during file deletion',
+          type: 'error'
+        });
+      }
+    } finally {
+      setDeletingFile(false);
+      setFileToDelete(null);
+    }
+  };
+
   const handleDownloadMaster = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (downloadingMaster) return;
     setDownloadingMaster(true);
-    if (showHUD) showHUD('Generating consolidated Master File...', 'info');
 
     try {
       const res = await authenticatedFetch('/download-master');
@@ -189,6 +273,7 @@ export default function AdminPanel() {
         });
       }
       fetchHistory();
+      fetchLiveFiles(false);
     } catch (err) {
       setUploadMessage({ type: 'error', text: err.detail || err.error || 'Failed to upload and ingest file.' });
       setHistory(prev => prev.map(f => f.id === tempId ? { ...f, status: 'Error' } : f));
@@ -334,6 +419,109 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* Hidden file input for Replace File action */}
+      <input 
+        type="file" 
+        accept=".xlsx" 
+        ref={replaceFileInputRef}
+        onChange={handleReplaceFileSelected}
+        style={{ display: 'none' }} 
+      />
+
+      {/* Delete Specific Live File Confirmation Modal */}
+      {fileToDelete && (
+        <div className={styles.modalOverlay} style={{ zIndex: 1100 }} onClick={() => !deletingFile && setFileToDelete(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: '#ef4444', margin: '0 0 1rem 0' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <span>Delete File Records?</span>
+            </h3>
+            <p>
+              Are you sure you want to delete all financial data originating from <strong>"{fileToDelete.filename}"</strong>?
+              {fileToDelete.sheets && fileToDelete.sheets.length > 0 && (
+                <span style={{ display: 'block', marginTop: '0.6rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                  This will remove records across {fileToDelete.sheets.length} sheet{fileToDelete.sheets.length > 1 ? 's' : ''} ({fileToDelete.sheets.join(', ')}). Other files will remain completely unaffected.
+                </span>
+              )}
+            </p>
+            <div className={styles.modalActions}>
+              <button 
+                type="button"
+                onClick={() => setFileToDelete(null)} 
+                className={styles.btnCancel}
+                disabled={deletingFile}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={() => confirmDeleteLiveFile(fileToDelete.filename)} 
+                className={styles.btnDanger}
+                disabled={deletingFile}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                {deletingFile ? (
+                  <>
+                    <div style={{
+                      width: 14,
+                      height: 14,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite'
+                    }} />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete File Data</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Replace Live File Confirmation Modal */}
+      {pendingReplaceFile && (
+        <div className={styles.modalOverlay} style={{ zIndex: 1100 }} onClick={() => setPendingReplaceFile(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: '#f59e0b', margin: '0 0 1rem 0' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Replace File Data</span>
+            </h3>
+            <p>
+              Replace all existing financial records from <strong>"{pendingReplaceFile.targetFilename}"</strong> with updated workbook <strong>"{pendingReplaceFile.newFile.name}"</strong>?
+              <span style={{ display: 'block', marginTop: '0.6rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                Old data for this file will be wiped and the new workbook will be ingested into the knowledge base.
+              </span>
+            </p>
+            <div className={styles.modalActions}>
+              <button 
+                type="button"
+                onClick={() => setPendingReplaceFile(null)} 
+                className={styles.btnCancel}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={confirmReplaceLiveFile} 
+                className={styles.btnReplace}
+              >
+                Confirm & Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Live Files in Database Modal */}
       {showLiveFilesModal && (
         <div className={styles.modalOverlay} onClick={() => setShowLiveFilesModal(false)}>
@@ -358,20 +546,75 @@ export default function AdminPanel() {
               ) : (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                   {liveFilesData.live_files.map((file, idx) => (
-                    <div key={idx} style={{background: 'var(--color-surface-hover, rgba(0,0,0,0.03))', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '1rem'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                          <span style={{fontSize: '1.2rem'}}>📊</span>
-                          <span style={{fontWeight: '600', color: 'var(--color-text)', fontSize: '0.95rem'}}>{file.filename}</span>
+                    <div key={idx} className={styles.liveFileCard}>
+                      <div className={styles.liveFileHeader}>
+                        <div className={styles.liveFileName}>{file.filename}</div>
+                        <div className={styles.liveFileActions}>
+                          <span className={styles.liveBadge}>● Live in DB</span>
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              className={styles.liveFileMenuBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveFileMenu(activeFileMenu === file.filename ? null : file.filename);
+                              }}
+                              title="File actions"
+                              aria-label="File actions"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="12" cy="5" r="1"></circle>
+                                <circle cx="12" cy="19" r="1"></circle>
+                              </svg>
+                            </button>
+
+                            {activeFileMenu === file.filename && (
+                              <div 
+                                className={styles.liveFileDropdown} 
+                                onMouseDown={(e) => e.stopPropagation()} 
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  className={styles.liveFileDropdownItem}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveFileMenu(null);
+                                    handleTriggerReplace(file.filename);
+                                  }}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                                  </svg>
+                                  <span>Replace File</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`${styles.liveFileDropdownItem} ${styles.liveFileDropdownDanger}`}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveFileMenu(null);
+                                    setFileToDelete(file);
+                                  }}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  </svg>
+                                  <span>Delete File</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <span style={{background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600'}}>
-                          ● Live in DB
-                        </span>
                       </div>
                       {file.sheets && file.sheets.length > 0 && (
-                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.4rem'}}>
+                        <div className={styles.liveFileSheets}>
                           {file.sheets.map((sheet, sIdx) => (
-                            <span key={sIdx} style={{background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '2px 8px', fontSize: '0.8rem', color: 'var(--color-text-muted)'}}>
+                            <span key={sIdx} className={styles.liveFileSheetTag}>
                               {sheet}
                             </span>
                           ))}

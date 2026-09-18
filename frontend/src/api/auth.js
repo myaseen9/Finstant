@@ -147,9 +147,24 @@ export const getValidToken = () => {
       return;
     }
     cognitoUser.getSession((err, session) => {
-      if (err || !session || !session.isValid()) {
+      if (err || !session) {
         resolve(localStorage.getItem('finstant_token'));
         return;
+      }
+      if (!session.isValid()) {
+        const refreshToken = session.getRefreshToken();
+        if (refreshToken) {
+          cognitoUser.refreshSession(refreshToken, (refreshErr, newSession) => {
+            if (refreshErr || !newSession || !newSession.isValid()) {
+              resolve(localStorage.getItem('finstant_token'));
+            } else {
+              const newToken = newSession.getIdToken().getJwtToken();
+              localStorage.setItem('finstant_token', newToken);
+              resolve(newToken);
+            }
+          });
+          return;
+        }
       }
       const token = session.getIdToken().getJwtToken();
       localStorage.setItem('finstant_token', token);

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Form, Query, HTTPException, Depends
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 import datetime
 import os
 import sys
@@ -12,6 +13,44 @@ from query_engine.functions import get_engine, get_kb_engine
 from api.dependencies import get_current_user, require_admin
 
 router = APIRouter()
+
+
+def get_kb_ingest_engine():
+    db_url = os.environ.get("KB_INGESTION_URL", os.environ.get("DATABASE_URL"))
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    return create_engine(db_url)
+
+
+def delete_source_file_from_kb(filename: str) -> int:
+    """Surgically deletes all rows where _source_file = filename across all dynamic tables in finstant_kb, and flushes cache."""
+    kb_admin_engine = get_kb_ingest_engine()
+    deleted_rows_total = 0
+    try:
+        with kb_admin_engine.connect() as kb_conn:
+            tables_res = kb_conn.execute(
+                text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")
+            ).fetchall()
+            for (tbl,) in tables_res:
+                if tbl in ('security_test', 'semantic_cache'):
+                    continue
+                try:
+                    res = kb_conn.execute(
+                        text(f'DELETE FROM "{tbl}" WHERE _source_file = :fname'),
+                        {"fname": filename}
+                    )
+                    if res.rowcount and res.rowcount > 0:
+                        deleted_rows_total += res.rowcount
+                except Exception:
+                    pass
+            try:
+                kb_conn.execute(text("TRUNCATE TABLE semantic_cache"))
+            except Exception:
+                pass
+            kb_conn.commit()
+    except Exception as e:
+        print(f"Error deleting source file '{filename}' from finstant_kb: {e}")
+    return deleted_rows_total
 
 
 @router.post("/upload")
@@ -28,7 +67,6 @@ async def upload_file(
     file_size = len(file_content)
 
     engine = get_app_engine()
-    kb_engine = get_engine()
 
     if not replace_target:
         with engine.connect() as conn:
@@ -54,16 +92,7 @@ async def upload_file(
     with engine.connect() as conn:
         if replace_target:
             conn.execute(text("UPDATE file_upload SET status = 'Replaced' WHERE filename = :rt"), {"rt": replace_target})
-            tables = ["capital_expenditures", "cash_inflows", "dashboard_summary", "debt_and_interest_schedule",
-                      "employee_directory", "payroll_logs", "saas_and_subscriptions", "tax_ledger",
-                      "travel_and_expense", "utility_bills", "vendor_directory", "vendor_payments"]
-            with kb_engine.connect() as kb_conn:
-                for table in tables:
-                    try:
-                        kb_conn.execute(text(f"DELETE FROM {table} WHERE _source_file = :rt"), {"rt": replace_target})
-                    except Exception:
-                        pass
-                kb_conn.commit()
+            delete_source_file_from_kb(replace_target)
 
         result = conn.execute(
             text("INSERT INTO file_upload (filename, size_bytes, status) VALUES (:filename, :size, 'Ingesting') RETURNING id"),
@@ -115,7 +144,6 @@ async def upload_file(
 @router.delete("/upload/{file_id}")
 async def delete_upload(file_id: int, current_user: dict = Depends(require_admin)):
     engine = get_app_engine()
-    kb_engine = get_engine()
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT filename FROM file_upload WHERE id = :id"), {"id": file_id}).fetchone()
@@ -123,20 +151,7 @@ async def delete_upload(file_id: int, current_user: dict = Depends(require_admin
             return {"error": "File not found"}
         filename = result[0]
 
-    tables = ["capital_expenditures", "cash_inflows", "dashboard_summary", "debt_and_interest_schedule",
-              "employee_directory", "payroll_logs", "saas_and_subscriptions", "tax_ledger",
-              "travel_and_expense", "utility_bills", "vendor_directory", "vendor_payments"]
-    with kb_engine.connect() as kb_conn:
-        for table in tables:
-            try:
-                kb_conn.execute(text(f"DELETE FROM {table} WHERE _source_file = :fname"), {"fname": filename})
-            except Exception:
-                pass
-        try:
-            kb_conn.execute(text("TRUNCATE TABLE semantic_cache"))
-        except Exception:
-            pass
-        kb_conn.commit()
+    delete_source_file_from_kb(filename)
 
     with engine.connect() as conn:
         conn.execute(text("DELETE FROM file_upload WHERE id = :id"), {"id": file_id})
@@ -145,16 +160,50 @@ async def delete_upload(file_id: int, current_user: dict = Depends(require_admin
     upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
     file_path = os.path.join(upload_dir, filename)
     if os.path.exists(file_path):
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
 
     return {"status": "success", "message": "File and associated data deleted."}
 
 
-def get_kb_ingest_engine():
-    db_url = os.environ.get("KB_INGESTION_URL", os.environ.get("DATABASE_URL"))
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    return create_engine(db_url)
+class DeleteLiveFileRequest(BaseModel):
+    filename: str
+
+
+@router.delete("/live-file")
+@router.post("/delete-live-file")
+@router.delete("/api/live-file")
+@router.post("/api/delete-live-file")
+@router.delete("/api/admin/live-file")
+@router.post("/api/admin/delete-live-file")
+async def delete_live_file(
+    filename: str = Query(...),
+    current_user: dict = Depends(require_admin)
+):
+    if not filename:
+        raise HTTPException(status_code=400, detail="Filename must be provided")
+
+    deleted_rows = delete_source_file_from_kb(filename)
+
+    engine = get_app_engine()
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM file_upload WHERE filename = :fname"), {"fname": filename})
+        conn.commit()
+
+    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
+    file_path = os.path.join(upload_dir, filename)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "message": f"File '{filename}' and all its associated financial data deleted successfully ({deleted_rows} records removed)."
+    }
 
 
 @router.delete("/wipe-knowledge-base")
@@ -194,12 +243,9 @@ async def wipe_knowledge_base(current_user: dict = Depends(require_admin)):
 
 @router.get("/download-master")
 async def download_master(current_user: dict = Depends(require_admin)):
+    from sqlalchemy import inspect
     kb_engine = get_engine()
-    tables = [
-        "capital_expenditures", "cash_inflows", "dashboard_summary", "debt_and_interest_schedule",
-        "employee_directory", "payroll_logs", "saas_and_subscriptions", "tax_ledger",
-        "travel_and_expense", "utility_bills", "vendor_directory", "vendor_payments"
-    ]
+    EXCLUDE_TABLES = {'semantic_cache', 'security_test', 'spatial_ref_sys', 'geometry_columns', 'geography_columns'}
 
     upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
     os.makedirs(upload_dir, exist_ok=True)
@@ -207,20 +253,37 @@ async def download_master(current_user: dict = Depends(require_admin)):
 
     with pd.ExcelWriter(master_path, engine='openpyxl') as writer:
         with kb_engine.connect() as conn:
-            sheets_written = 0
-            for table in tables:
+            # Dynamically discover all active tables across Postgres or SQLite
+            try:
+                tables_res = conn.execute(
+                    text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")
+                ).fetchall()
+                available_tables = [t[0] for t in tables_res]
+            except Exception:
                 try:
-                    df = pd.read_sql_table(table, conn)
-                    if 'id' in df.columns:
-                        df = df.drop(columns=['id'])
-                    sheet_name = table.replace('_', ' ').title()[:31]
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
-                    sheets_written += 1
+                    inspector = inspect(kb_engine)
+                    available_tables = inspector.get_table_names()
                 except Exception:
+                    available_tables = []
+
+            sheets_written = 0
+            for table in available_tables:
+                if table in EXCLUDE_TABLES or table.startswith('_'):
+                    continue
+                try:
+                    df = pd.read_sql_query(text(f'SELECT * FROM "{table}"'), conn)
+                    if df is not None and not df.empty:
+                        if 'id' in df.columns:
+                            df = df.drop(columns=['id'])
+                        sheet_name = table.replace('_', ' ').title()[:31]
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        sheets_written += 1
+                except Exception as ex:
+                    print(f"Skipping table {table} during master export: {ex}")
                     pass
 
             if sheets_written == 0:
-                pd.DataFrame({"Status": ["No data available"]}).to_excel(writer, sheet_name="Empty Dataset", index=False)
+                pd.DataFrame({"Status": ["No data available in database"]}).to_excel(writer, sheet_name="Empty Dataset", index=False)
 
     return FileResponse(
         master_path,

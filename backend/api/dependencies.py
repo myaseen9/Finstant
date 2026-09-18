@@ -43,11 +43,12 @@ def get_current_user(request: Request) -> dict:
             get_jwks(), 
             algorithms=["RS256"],
             audience=APP_CLIENT_ID, 
-            issuer=f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}"
+            issuer=f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}",
+            options={"verify_at_hash": False, "leeway": 120}
         )
     except jwt.JWTError as e:
         print(f"JWT Validation Error: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {e}")
 
     cognito_sub_id = claims.get("sub")
     email_val = (claims.get("email") or "").strip()
